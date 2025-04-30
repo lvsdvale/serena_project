@@ -1,0 +1,6 @@
+.env
+__pycache__
+.pytest_cache
+/medicine_recognizer/datasets/
+.yolo-config.yaml
+*.ipynb

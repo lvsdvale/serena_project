@@ -1,0 +1,6 @@
+path: medicine_database_for_yolo
+train: images/train
+val: images/val
+
+names:
+  0: caixa_remedio
