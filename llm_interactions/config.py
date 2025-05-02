@@ -3,9 +3,12 @@
 import os
 
 from dotenv import load_dotenv
+from langchain_huggingface import HuggingFaceEndpoint
 
 load_dotenv()
 
 
-openAI_api_key = os.getenv("OPENAI_API_KEY")
-headers = {"Authorization": f"Bearer {openAI_api_key}"}
+llm = HuggingFaceEndpoint(
+    repo_id="meta-llama/Meta-Llama-3-8B-Instruct",
+    task="text-generation",
+)

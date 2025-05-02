@@ -18,8 +18,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-from prompts.user_interaction_prompt import user_interaction_prompt
-
 llm = HuggingFaceEndpoint(
     repo_id="meta-llama/Meta-Llama-3-8B-Instruct",
     task="text-generation",
@@ -27,7 +25,7 @@ llm = HuggingFaceEndpoint(
 
 user_interaction_data = "estou com dor de cabeça"
 prescription = "em caso de dor de cabeça tomar paracetamol"
-chain = user_interaction_prompt() | llm
+chain = llm
 res = chain.invoke(
     input={
         "user_interaction_data": user_interaction_data,
