@@ -31,12 +31,10 @@ print(DB_CONFIG)
 DB_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
 
 # SQLAlchemy setup
-engine = create_engine(DB_URL, echo=True)
-Session = sessionmaker(bind=engine)
 
 
 @tool
-def get_prescriptions_by_device(device_id: str) -> str:
+def get_prescriptions_by_device(database_url: str, device_id: str) -> str:
     """
     Returns all prescriptions for the patient associated with a given device ID. Use this tool to see what medications the patient is already prescribed. It can be helpful in assessing what they can take for a reported symptom.
 
@@ -46,6 +44,9 @@ def get_prescriptions_by_device(device_id: str) -> str:
     Returns:
         A JSON string containing all prescription items for the patient.
     """
+    engine = create_engine(database_url, echo=True)
+    Session = sessionmaker(bind=engine)
+
     try:
         session = Session()
         senior_query = text(
