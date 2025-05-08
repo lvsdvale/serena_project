@@ -25,42 +25,59 @@ Session = sessionmaker(bind=engine)
 
 
 @tool
-def log_interaction(symptom: str, suggestion: str, patient_id: str) -> str:
+def log_interaction(symptom: str, suggestion: str, device_id: str) -> str:
     """
-    Logs a patient's reported symptom and the suggested treatment in the database.
+    Logs a patient's reported symptom and the assistant's response in the database
+    using the device_id to identify the patient.
 
     Args:
-        symptom: Symptom reported by the patient.
-        suggestion: Medication or advice provided by the assistant.
-        patient_id: ID of the patient.
+        symptom: Symptom reported by the patient (e.g., "headache").
+        suggestion: Assistant's recommendation or treatment suggestion.
+        device_id: Device identifier associated with the patient.
 
     Returns:
-        A confirmation string with timestamp of the log entry.
+        A confirmation message with timestamp or error description.
     """
     try:
         session = Session()
 
-        timestamp = datetime.utcnow()
-        query = text(
+        senior_query = text(
             """
-            INSERT INTO interactions (patient_id, symptom, suggestion, timestamp)
-            VALUES (:patient_id, :symptom, :suggestion, :timestamp)
+            SELECT senior_id, user_user_id
+            FROM senior
+            WHERE serena_device_serena_device_code = :device_id
+        """
+        )
+        senior = session.execute(senior_query, {"device_id": device_id}).fetchone()
+
+        if not senior:
+            return f"No patient associated with device ID '{device_id}'."
+
+        senior_id = senior["senior_id"]
+        user_id = senior["user_user_id"]
+
+        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        insert_query = text(
+            """
+            INSERT INTO complaint (syptom, serena_llm_response, create_time, Senior_senior_id, Senior_user_user_id)
+            VALUES (:symptom, :suggestion, :timestamp, :senior_id, :user_id)
         """
         )
         session.execute(
-            query,
+            insert_query,
             {
-                "patient_id": patient_id,
                 "symptom": symptom,
                 "suggestion": suggestion,
                 "timestamp": timestamp,
+                "senior_id": senior_id,
+                "user_id": user_id,
             },
         )
-        session.commit()
 
-        return f"Interaction logged successfully at {timestamp}."
+        session.commit()
+        return f"Symptom logged successfully at {timestamp}."
 
     except Exception as e:
-        return f"Error logging interaction: {str(e)}"
+        return f"Error logging symptom: {str(e)}"
     finally:
         session.close()

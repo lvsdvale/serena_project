@@ -1,5 +1,6 @@
 """This file implements the get prescription tool"""
 
+import json
 import os
 import sys
 from datetime import datetime
@@ -35,70 +36,69 @@ Session = sessionmaker(bind=engine)
 
 
 @tool
-def get_prescription(symptom: str, patient_id: str, table_name: str) -> str:
+def get_prescriptions_by_device(device_id: str) -> str:
     """
-    Queries the database for medications recommended for a given symptom,
-    considering the patient's medical conditions and contraindications.
-    After querying the database, it generates a prescription recommendation
-    using the LLM.
+    Returns all prescriptions for the patient associated with a given device ID. Use this tool to see what medications the patient is already prescribed. It can be helpful in assessing what they can take for a reported symptom.
 
-    Args:
-        symptom: Symptom reported by the patient (e.g., "headache").
-        patient_id: Unique identifier of the patient in the database.
-        table_name: Name of the prescription table to query.
+    Parameters:
+        device_id: The code of the Serena device (serena_device_code)
 
     Returns:
-        A string with the medication recommendation.
+        A JSON string containing all prescription items for the patient.
     """
     try:
         session = Session()
-
-        # 1. Retrieve patient information
-        query = text(
+        senior_query = text(
             """
-            SELECT contraindications, medical_history
-            FROM patients
-            WHERE patient_id = :patient_id
+            SELECT senior_user_id
+            FROM senior
+            WHERE device_code = :device_id
         """
         )
-        result = session.execute(query, {"patient_id": patient_id}).fetchone()
+        senior_result = session.execute(
+            senior_query, {"device_id": device_id}
+        ).fetchone()
 
-        if not result:
-            return f"No patient found with ID '{patient_id}'."
+        if not senior_result:
+            return f"No senior found with device ID '{device_id}'."
 
-        contraindications = (
-            result["contraindications"].split(",")
-            if result["contraindications"]
-            else []
-        )
-        patient_history = result["medical_history"]
-
-        query = text(
-            f"""
-            SELECT name, dosage, substances
-            FROM {table_name}
-            WHERE :symptom ILIKE ANY (symptoms)
+        senior_id = senior_result[0]
+        prescription_query = text(
+            """
+            SELECT
+                p.prescription_id,
+                pi.medication_name,
+                pi.dosage,
+                pi.duration_time
+            FROM prescription p
+            JOIN prescription_item pi ON p.prescription_id = pi.prescription_id
+            WHERE p.senior_user_id = :senior_id
         """
         )
-        prescriptions = session.execute(query, {"symptom": symptom}).fetchall()
 
-        safe_meds = []
-        prescription_guidance = ""
-        for presc in prescriptions:
-            substances = presc["substances"].split(",") if presc["substances"] else []
-            if any(
-                c.lower() in [s.lower() for s in substances] for c in contraindications
-            ):
-                continue
-            safe_meds.append(f"{presc['name']} ({presc['dosage']})")
+        results = session.execute(
+            prescription_query, {"senior_id": senior_id}
+        ).fetchall()
 
-        if not safe_meds:
-            return "No safe medications found for the reported symptom."
+        if not results:
+            return f"No prescriptions found for senior with device ID '{device_id}'."
 
-        prescription_guidance = ", ".join(safe_meds)
-        prescription_guidance = prescription_guidance.join(patient_history)
+        prescriptions = []
+        for row in results:
+            prescriptions.append(
+                {
+                    "prescription_id": row[0],
+                    "medication_name": row[1],
+                    "dosage": row[2],
+                    "duration_time": (
+                        row[3].strftime("%Y-%m-%d %H:%M:%S")
+                        if isinstance(row[3], datetime)
+                        else row[3]
+                    ),
+                }
+            )
 
-        return prescription_guidance
+        return json.dumps(prescriptions, indent=2)
 
     except Exception as e:
         return f"Error while querying prescriptions: {str(e)}"

@@ -4,7 +4,7 @@ repos:
     hooks:
       - id: flake8
         args:
-          - --ignore=E501,E402,W503,F401
+          - --ignore=E501,E402,W503,F401,W291
 
   - repo: https://github.com/psf/black
     rev: '24.3.0'
