@@ -8,24 +8,11 @@ from langchain.tools import tool
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = os.path.dirname(CURRENT_DIR)
-sys.path.append(PROJECT_DIR)
-
-
-from dotenv import load_dotenv
-
-load_dotenv()
-
-DB_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
-
-# SQLAlchemy setup
-engine = create_engine(DB_URL, echo=True)
-Session = sessionmaker(bind=engine)
-
 
 @tool
-def log_interaction(symptom: str, suggestion: str, device_id: str) -> str:
+def log_interaction(
+    database_url: str, symptom: str, suggestion: str, device_id: str
+) -> str:
     """
     Logs a patient's reported symptom and the assistant's response in the database
     using the device_id to identify the patient.
@@ -38,14 +25,16 @@ def log_interaction(symptom: str, suggestion: str, device_id: str) -> str:
     Returns:
         A confirmation message with timestamp or error description.
     """
+    engine = create_engine(database_url, echo=True)
+    Session = sessionmaker(bind=engine)
     try:
         session = Session()
 
         senior_query = text(
             """
-            SELECT senior_id, user_user_id
-            FROM senior
-            WHERE serena_device_serena_device_code = :device_id
+            SELECT senior_senior_id, senior_user_id
+            FROM serena_device
+            WHERE serena_device_code = :device_id
         """
         )
         senior = session.execute(senior_query, {"device_id": device_id}).fetchone()
@@ -53,13 +42,13 @@ def log_interaction(symptom: str, suggestion: str, device_id: str) -> str:
         if not senior:
             return f"No patient associated with device ID '{device_id}'."
 
-        senior_id = senior["senior_id"]
-        user_id = senior["user_user_id"]
+        senior_id = senior[0]
+        user_id = senior[1]
 
         timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         insert_query = text(
             """
-            INSERT INTO complaint (syptom, serena_llm_response, create_time, Senior_senior_id, Senior_user_user_id)
+            INSERT INTO complaint (symptom, serena_llm_response, create_time, senior_senior_id, senior_user_user_id)
             VALUES (:symptom, :suggestion, :timestamp, :senior_id, :user_id)
         """
         )

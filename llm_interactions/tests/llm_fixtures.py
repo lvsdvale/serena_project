@@ -26,15 +26,9 @@ def mock_prescription_query_response():
     expected_value = [
         {
             "prescription_id": 1,
-            "medication_name": "Aspirin",
-            "dosage": "500mg",
-            "duration_time": "2025-05-01 10:00:00",
-        },
-        {
-            "prescription_id": 1,
-            "medication_name": "Metformin",
-            "dosage": "850mg",
-            "duration_time": "2025-05-01 10:00:00",
+            "medication_name": "Paracetamol",
+            "dosage": "1 comprimido",
+            "duration_time": 2,
         },
     ]
     return json.dumps(expected_value, indent=2)
@@ -42,4 +36,4 @@ def mock_prescription_query_response():
 
 @pytest.fixture
 def mock_device_id():
-    return "serena_1"
+    return "SERENA001"

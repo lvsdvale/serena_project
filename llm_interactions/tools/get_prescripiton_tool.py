@@ -1,45 +1,21 @@
 """This file implements the get prescription tool"""
 
 import json
-import os
-import sys
 from datetime import datetime
 
 from langchain.tools import tool
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = os.path.dirname(CURRENT_DIR)
-sys.path.append(PROJECT_DIR)
-
-
-from dotenv import load_dotenv
-
-load_dotenv()
-
-DB_CONFIG = {
-    "dbname": os.getenv("DB_NAME"),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "host": os.getenv("DB_HOST"),
-    "port": os.getenv("DB_PORT", "5432"),
-}
-
-print(DB_CONFIG)
-
-DB_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
-
-# SQLAlchemy setup
-
 
 @tool
-def get_prescriptions_by_device(database_url: str, device_id: str) -> str:
+def get_prescriptions_by_device(database_url: str, device_id: str) -> json:
     """
     Returns all prescriptions for the patient associated with a given device ID. Use this tool to see what medications the patient is already prescribed. It can be helpful in assessing what they can take for a reported symptom.
 
     Parameters:
-        device_id: The code of the Serena device (serena_device_code)
+        database_url(str): the database acess url.
+        device_id: The code of the Serena device (serena_device_code).
 
     Returns:
         A JSON string containing all prescription items for the patient.
@@ -51,9 +27,9 @@ def get_prescriptions_by_device(database_url: str, device_id: str) -> str:
         session = Session()
         senior_query = text(
             """
-            SELECT senior_user_id
-            FROM senior
-            WHERE device_code = :device_id
+            SELECT senior_senior_id
+            FROM serena_device
+            WHERE serena_device_code = :device_id
         """
         )
         senior_result = session.execute(
@@ -66,14 +42,14 @@ def get_prescriptions_by_device(database_url: str, device_id: str) -> str:
         senior_id = senior_result[0]
         prescription_query = text(
             """
-            SELECT
-                p.prescription_id,
-                pi.medication_name,
-                pi.dosage,
-                pi.duration_time
-            FROM prescription p
-            JOIN prescription_item pi ON p.prescription_id = pi.prescription_id
-            WHERE p.senior_user_id = :senior_id
+        SELECT
+            p.prescription_id,
+            pi.medicine_name,
+            pi.dosage,
+            pi.duration_time
+        FROM prescription p
+        JOIN prescription_item pi ON p.prescription_id = pi.prescription_prescription_id
+        WHERE p.senior_senior_id = :senior_id
         """
         )
 
