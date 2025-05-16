@@ -17,6 +17,7 @@ from llm_interactions.tools.log_interaction_tool import log_interaction
 from llm_interactions.tools.update_compartment_stock_amout_tool import \
     update_compartment_stock
 from medicine_recognizer.detection_pipeline import DetectionPipeline
+from utils import extract_quantity_from_dose, get_stock_ids_by_name
 from voice_decoder.voice_decoder import VoiceDecoder
 
 DATABASE_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
@@ -57,9 +58,26 @@ def run_serena_assistent(database_url: str, device_id: str):
                 f"{parsed_response['motivo']},você gostaria de tomar via dispenser ou utilizando a visão computacional"
             )
             option = decoder.audio_to_string()
+            while "dispenser" not in option or "visão computacional" not in option:
+                decoder.string_to_speech(
+                    "opção selecionada invalida, por favor fale novamente e escolha entre visão computacional ou dispenser"
+                )
+                option = decoder.audio_to_string()
             if "dispenser" in option:
-                pass  # do stuff
-            if "visao computacional" in option:
+                compartment_stock = get_compartment_stock_by_device(device_id)
+                compartment_ids = get_stock_ids_by_name(
+                    parsed_response["medicamento_recomendado"], compartment_stock
+                )
+                quantity_used = extract_quantity_from_dose(parsed_response["dose"])
+                update_compartment_stock(
+                    {
+                        "database_url": database_url,
+                        "stock_id": compartment_ids[0],
+                        "quantity_used": quantity_used,
+                    }
+                )
+
+            if "visão computacional" in option:
                 medication_list = [
                     medication["medication_name"]
                     for medication in get_medication({"database_url": database_url})
@@ -88,7 +106,7 @@ print(llm)
 
 
 def test_serena_assistent(
-    database_url: str, device_id: str, command="estou com dor de cabeça"
+    database_url: str, device_id: str, command="estou com dor no corpo"
 ):
     decoder = VoiceDecoder(language="pt-BR", wake_word="Serena")
     user_interaction_agent = user_interaction_prompt | llm
@@ -105,8 +123,7 @@ def test_serena_assistent(
 
     response = user_interaction_agent.invoke(user_interaction_inputs)
     parsed_response = json.loads(response)
-    print(type(parsed_response))
-    print(parsed_response.keys())
+    print(parsed_response)
     log_interaction(
         {
             "device_id": device_id,

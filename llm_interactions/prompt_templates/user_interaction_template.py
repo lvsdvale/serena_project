@@ -28,7 +28,7 @@ Prescrições atuais:
 Comando relatado pelo paciente:
 {command}
 
-**pense bem** como um **médico**  e Responda **somente** no seguinte formato JSON:
+**pense bem** como um **médico** baseado nos dados fornecidos e Responda **somente** no seguinte formato JSON:
 
 {{
   "sintoma": "<sintoma relatado extraído do comando>",
@@ -36,7 +36,6 @@ Comando relatado pelo paciente:
   "dose": "<dose recomendada, ex: '1 comprimido', '5 ml', ou 'nenhuma'>",
   "motivo": "<explicação clínica curta baseada nas informações fornecidas>",
 }}
-
 
 """,
 )
