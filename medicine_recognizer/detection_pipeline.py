@@ -3,6 +3,7 @@ This file implements the DetectionPipeline class, which handles the real-time de
 of medicine packages using a YOLO model and extracts text via OCR.
 """
 
+import os
 from typing import Optional
 
 import cv2
@@ -11,6 +12,8 @@ import ultralytics
 from ultralytics import YOLO
 
 from medicine_recognizer.ocr_pipeline import OCRPipeline
+
+# from ocr_pipeline import OCRPipeline
 
 
 class DetectionPipeline:
@@ -27,7 +30,11 @@ class DetectionPipeline:
     """
 
     def __init__(
-        self, yolo_model_path: str = "models/best.pt", stability_threshold: int = 10
+        self,
+        yolo_model_path: str = os.path.join(
+            os.path.dirname(__file__), "models", "best.pt"
+        ),
+        stability_threshold: int = 10,
     ):
         """
         Initializes the DetectionPipeline with a YOLO model and an OCR pipeline.
@@ -182,6 +189,7 @@ class DetectionPipeline:
             results = self.yolo_model(frame)[0]
             annotated_frame = results.plot()
             cv2.imshow("YOLO Detection", annotated_frame)
+            key = cv2.waitKey(1) & 0xFF
 
             if len(results.boxes) > 0:
                 x1, y1, x2, y2 = map(int, results.boxes[0].xyxy[0])
@@ -200,7 +208,6 @@ class DetectionPipeline:
 
                     try:
                         if text.strip():
-                            print(f"OCR output: {text}")
                             cap.release()
                             cv2.destroyAllWindows()
                             return text

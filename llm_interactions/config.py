@@ -14,12 +14,15 @@ model_path = os.path.join(
 
 llm = LlamaCpp(
     model_path=model_path,
-    n_ctx=4096,
+    n_ctx=1024,
     n_threads=8,
     temperature=0.7,
     top_p=0.95,
     stop=["</s>", "User:", "Assistant:"],
+    chat_format="chatml",
     verbose=True,
+    use_mlock=True,
+    n_batch=512,
 )
 
 

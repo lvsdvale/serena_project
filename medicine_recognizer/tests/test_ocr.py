@@ -1,7 +1,11 @@
 """this file test ia agent"""
 
+import warnings
+
 from fixtures import *
 from ocr_pipeline import OCRPipeline
+
+warnings.filterwarnings("ignore", message="'pin_memory' argument is set as true")
 
 
 def test_ocr_pipeline_initialization():

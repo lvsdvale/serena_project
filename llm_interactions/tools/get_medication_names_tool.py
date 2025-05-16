@@ -39,7 +39,7 @@ def get_medication(database_url: str) -> str:
         results = session.execute(medication_query).fetchall()
 
         medications = [{"medication_name": row[0]} for row in results]
-        return json.dumps(medications, ensure_ascii=False)
+        return medications
 
     except Exception as e:
         return json.dumps(

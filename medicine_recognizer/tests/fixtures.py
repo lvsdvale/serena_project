@@ -3,6 +3,7 @@
 import os
 import sys
 
+import numpy as np
 import pytest
 from PIL import Image
 
@@ -14,9 +15,10 @@ sys.path.append(PROJECT_DIR)
 @pytest.fixture
 def mock_medication_image():
     """returns a PIL image of medication"""
-    return Image.open(
+    image = Image.open(
         "medicine_recognizer/datasets/medicine_database/ibuprofeno/ibuprofeno_1.jpg"
     )
+    return np.array(image)
 
 
 @pytest.fixture
