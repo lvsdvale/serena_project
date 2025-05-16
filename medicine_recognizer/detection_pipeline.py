@@ -8,8 +8,9 @@ from typing import Optional
 import cv2
 import numpy as np
 import ultralytics
-from ocr_pipeline import OCRPipeline
 from ultralytics import YOLO
+
+from medicine_recognizer.ocr_pipeline import OCRPipeline
 
 
 class DetectionPipeline:
@@ -171,7 +172,7 @@ class DetectionPipeline:
 
         last_bbox: Optional[np.ndarray] = None
         stable_counter: int = 0
-        stable_required: int = 5  # Frames required to be stable before OCR
+        stable_required: int = 6
 
         while cap.isOpened():
             ret, frame = cap.read()

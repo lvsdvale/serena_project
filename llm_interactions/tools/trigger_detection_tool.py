@@ -9,7 +9,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = os.path.dirname(CURRENT_DIR)
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+PROJECT_DIR = os.path.dirname(PARENT_DIR)
 sys.path.append(PROJECT_DIR)
 
 from dotenv import load_dotenv
@@ -37,6 +38,6 @@ def trigger_detection() -> str:
     detection_pipeline = DetectionPipeline()
     try:
         detected = detection_pipeline.run_detection()
-        return f"Detected medicine: {detected}"
+        return detected
     except Exception as e:
         return f"Error during detection: {str(e)}"

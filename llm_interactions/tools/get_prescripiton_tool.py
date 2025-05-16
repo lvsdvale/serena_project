@@ -20,7 +20,7 @@ def get_prescriptions_by_device(database_url: str, device_id: str) -> json:
     Returns:
         A JSON string containing all prescription items for the patient.
     """
-    engine = create_engine(database_url, echo=True)
+    engine = create_engine(database_url, echo=False)
     Session = sessionmaker(bind=engine)
 
     try:

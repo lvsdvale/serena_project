@@ -98,7 +98,7 @@ class OCRPipeline:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
 
-    def preprocess_image(image: np.ndarray) -> np.ndarray:
+    def preprocess_image(self, image: np.ndarray) -> np.ndarray:
         """
         Preprocess the image for better OCR performance.
 

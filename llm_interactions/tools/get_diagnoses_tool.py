@@ -21,7 +21,7 @@ def get_diagnoses_by_device(database_url: str, device_id: str) -> json:
         A Json listing the diseases diagnosed for the patient, or a message if none are found.
     """
     try:
-        engine = create_engine(database_url, echo=True)
+        engine = create_engine(database_url, echo=False)
         Session = sessionmaker(bind=engine)
         session = Session()
 
