@@ -19,7 +19,7 @@ from llm_interactions.tools.update_compartment_stock_amout_tool import \
 from medicine_recognizer.detection_pipeline import DetectionPipeline
 from utils import (computer_vision_pipeline, dispenser_pipeline,
                    extract_quantity_from_dose, get_stock_ids_by_name,
-                   hash_option)
+                   hash_option, parse_to_json)
 from voice_decoder.voice_decoder import VoiceDecoder
 
 DATABASE_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
@@ -28,9 +28,9 @@ DATABASE_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@
 def run_serena_assistent(database_url: str, device_id: str):
     decoder = VoiceDecoder(language="pt-BR", wake_word="Serena")
     while True:
-        # query -> verificar horario where data < datetime now
         if decoder.listen_for_wake_word():
             command = decoder.audio_to_string()
+            print(command)
             while not command.strip():
                 decoder.string_to_speech("Desculpe, não entendi. Pode repetir?")
                 command = decoder.audio_to_string()
@@ -46,17 +46,17 @@ def run_serena_assistent(database_url: str, device_id: str):
             user_interaction_inputs["diagnoses"] = diagnoses
             user_interaction_inputs["prescriptions"] = prescriptions
             response = user_interaction_agent.invoke(user_interaction_inputs)
-            parsed_response = json.loads(response)
+            parsed_response = parse_to_json(response)
             log_interaction(
                 {
                     "device_id": device_id,
                     "database_url": database_url,
                     "symptom": parsed_response["sintoma"],
-                    "suggestion": parsed_response["motivo"],
+                    "suggestion": parsed_response["sugestão"],
                 }
             )
             decoder.string_to_speech(
-                f"{parsed_response['motivo']},você gostaria de tomar via dispenser ou utilizando a câmera"
+                f"{parsed_response['sugestão']},você gostaria de tomar via dispenser ou utilizando a câmera"
             )
             option = decoder.audio_to_string()
             hashed_option = hash_option(option)
@@ -89,7 +89,8 @@ def test_serena_assistent(database_url: str, device_id: str):
     decoder = VoiceDecoder(language="pt-BR", wake_word="Serena")
     while True:
         if decoder.listen_for_wake_word():
-            command = decoder.audio_to_string()
+            # command = decoder.audio_to_string()
+            command = "estou com crise alergica"
             print(command)
             while not command.strip():
                 decoder.string_to_speech("Desculpe, não entendi. Pode repetir?")
@@ -106,17 +107,21 @@ def test_serena_assistent(database_url: str, device_id: str):
             user_interaction_inputs["diagnoses"] = diagnoses
             user_interaction_inputs["prescriptions"] = prescriptions
             response = user_interaction_agent.invoke(user_interaction_inputs)
-            parsed_response = json.loads(response)
+            print(response.content)
+            parsed_response = parse_to_json(response.content)
+            if parsed_response["medicamento_recomendado"].lower() == "nenhum":
+                decoder.string_to_speech(f"{parsed_response['sugestão']}")
+                continue
             log_interaction(
                 {
                     "device_id": device_id,
                     "database_url": database_url,
                     "symptom": parsed_response["sintoma"],
-                    "suggestion": parsed_response["motivo"],
+                    "suggestion": parsed_response["sugestão"],
                 }
             )
             decoder.string_to_speech(
-                f"{parsed_response['motivo']},você gostaria de tomar via dispenser ou utilizando a câmera"
+                f"{parsed_response['sugestão']},você gostaria de tomar via dispenser ou utilizando a câmera"
             )
             option = decoder.audio_to_string()
             hashed_option = hash_option(option)

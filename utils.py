@@ -1,7 +1,8 @@
 """implement useful functions"""
 
+import json
 import re
-from typing import Union
+from typing import Any, Dict, Union
 
 from llm_interactions.tools.get_compartment_stock_tool import \
     get_compartment_stock_by_device
@@ -65,13 +66,21 @@ def computer_vision_pipeline(
         detection_pipeline = DetectionPipeline()
         while not medicine_confirmation:
             detection_response = detection_pipeline.run_detection()
-            medication_found = set(detection_response.split(" ")) & set(medication_list)
+            medication_list = [med.lower() for med in medication_list]
+            detection_response = [
+                word.lower() for word in detection_response.split(" ")
+            ]
+            medication_found = set(detection_response) & set(medication_list)
             if medication_found:
-                if medicine in detection_response:
-                    medicine_confirmation = True
+                if medicine.lower() not in detection_response:
+                    decoder.string_to_speech(
+                        f"Esse não é o remédio correto, o remédio correto é {medicine}, você mostrou o {list(medication_found)[0]}"
+                    )
+                    continue
+                medicine_confirmation = True
             else:
                 decoder.string_to_speech(
-                    f"Esse não é o remédio correto, o remédio correto é {medicine}, você mostrou o {detection_response}"
+                    "O Remédio mostrado está fora da base de dados"
                 )
         decoder.string_to_speech("Esse é o remédio certo pode tomar")
 
@@ -83,7 +92,9 @@ def dispenser_pipeline(
     quantity_used_list: list,
     decoder,
 ):
-    compartment_stock = get_compartment_stock_by_device(device_id)
+    compartment_stock = get_compartment_stock_by_device(
+        {"database_url": database_url, "device_id": device_id}
+    )
     compartment_ids = get_stock_ids_by_name(medicine_names, compartment_stock)
     if not compartment_ids or medicine_names > compartment_ids:
         computer_vision_pipeline(database_url, medicine_names, decoder)
@@ -98,3 +109,29 @@ def dispenser_pipeline(
                 "quantity_used": quantity_used,
             }
         )
+
+
+def parse_to_json(llm_output: str) -> Dict[str, Any]:
+    """
+    Extracts the first valid JSON object from a string returned by a language model (LLM),
+    removing any surrounding text, headers, or formatting (e.g., markdown or comments).
+
+    Args:
+        llm_output (str): The raw output string returned by the LLM.
+
+    Returns:
+        Dict[str, Any]: A Python dictionary representing the parsed JSON object.
+
+    Raises:
+        ValueError: If no JSON is found or the JSON is invalid.
+    """
+    try:
+        match = re.search(r"\{.*\}", llm_output, re.DOTALL)
+        if not match:
+            raise ValueError("No JSON object found in the LLM output.")
+
+        raw_json = match.group(0)
+        return json.loads(raw_json)
+
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse JSON: {e}")
