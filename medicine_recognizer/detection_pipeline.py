@@ -180,7 +180,6 @@ class DetectionPipeline:
         last_bbox: Optional[np.ndarray] = None
         stable_counter: int = 0
         stable_required: int = 6
-
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -188,7 +187,7 @@ class DetectionPipeline:
 
             results = self.yolo_model(frame)[0]
             annotated_frame = results.plot()
-            cv2.imshow("YOLO Detection", annotated_frame)
+            #cv2.imshow('Detection', annotated_frame)
             key = cv2.waitKey(1) & 0xFF
 
             if len(results.boxes) > 0:

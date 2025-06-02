@@ -2,10 +2,11 @@
 
 import tempfile
 
-import playsound
 import speech_recognition as sr
 from gtts import gTTS
-
+from pydub import AudioSegment
+from pydub.playback import play
+import tempfile
 
 class VoiceDecoder:
     """
@@ -13,7 +14,7 @@ class VoiceDecoder:
     speech-to-text conversion, and text-to-speech synthesis.
     """
 
-    def __init__(self, language: str = "en-us", wake_word: str = "Serana"):
+    def __init__(self, language: str = "pt-br", wake_word: str = "Serena"):
         """
         Initializes the VoiceDecoder with language and wake word.
 
@@ -30,10 +31,12 @@ class VoiceDecoder:
 
         :param text: The string to be spoken.
         """
-        tts = gTTS(text=text, lang="pt")
-        with tempfile.NamedTemporaryFile(delete=True, suffix=".mp3") as fp:
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+            tts = gTTS(text, lang='pt')
             tts.save(fp.name)
-            playsound.playsound(fp.name)
+            audio = AudioSegment.from_file(fp.name, format="mp3")
+            play(audio)
 
     def audio_to_string(self) -> str:
         """
@@ -43,8 +46,8 @@ class VoiceDecoder:
         """
         with sr.Microphone() as source:
             print("Listening for a command...")
-            self.recognizer.adjust_for_ambient_noise(source)
-            audio = self.recognizer.listen(source)
+            self.recognizer.adjust_for_ambient_noise(source, duration=1.2)
+            audio = self.recognizer.listen(source, phrase_time_limit=6)
 
         try:
             text = self.recognizer.recognize_google(audio, language=self.language)
@@ -65,7 +68,7 @@ class VoiceDecoder:
 
         while True:
             with sr.Microphone() as source:
-                self.recognizer.adjust_for_ambient_noise(source)
+                self.recognizer.adjust_for_ambient_noise(source, duration=1.2)
                 try:
                     audio = self.recognizer.listen(source, timeout=2)
                     phrase = self.recognizer.recognize_google(

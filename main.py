@@ -89,8 +89,7 @@ def test_serena_assistent(database_url: str, device_id: str):
     decoder = VoiceDecoder(language="pt-BR", wake_word="Serena")
     while True:
         if decoder.listen_for_wake_word():
-            # command = decoder.audio_to_string()
-            command = "estou com crise alergica"
+            command = decoder.audio_to_string()
             print(command)
             while not command.strip():
                 decoder.string_to_speech("Desculpe, não entendi. Pode repetir?")
@@ -123,6 +122,7 @@ def test_serena_assistent(database_url: str, device_id: str):
             decoder.string_to_speech(
                 f"{parsed_response['sugestão']},você gostaria de tomar via dispenser ou utilizando a câmera"
             )
+            
             option = decoder.audio_to_string()
             hashed_option = hash_option(option)
             while hashed_option is None:

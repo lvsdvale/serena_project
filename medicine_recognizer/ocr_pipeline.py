@@ -116,7 +116,7 @@ class OCRPipeline:
         results = self.reader.readtext(image, detail=0)
         self.raw_text_output = " ".join(results)
         self.process_output()
-        print(self.processed_text_output)
+        
 
     def image_path_to_string(self, image_path: str) -> None:
         """
@@ -126,4 +126,3 @@ class OCRPipeline:
         results = self.reader.readtext(image, detail=0)
         self.raw_text_output = " ".join(results)
         self.process_output()
-        print(self.processed_text_output)

@@ -11,6 +11,18 @@ from llm_interactions.tools.update_compartment_stock_amout_tool import \
     update_compartment_stock
 from medicine_recognizer.detection_pipeline import DetectionPipeline
 
+def try_except(log_error=True, default_return=None):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                if log_error:
+                    print(f"[!] Erro em '{func.__name__}': {e}")
+                return default_return
+        return wrapper
+    return decorator
+
 
 def get_stock_ids_by_name(medicine_names, stock_data):
     """
@@ -25,7 +37,7 @@ def get_stock_ids_by_name(medicine_names, stock_data):
     """
     if isinstance(medicine_names, str):
         medicine_names = [medicine_names]
-
+    print(stock_data)
     medicine_index = {
         item["medicine_name"].lower(): item["stock_id"] for item in stock_data
     }
@@ -47,13 +59,38 @@ def extract_quantity_from_dose(dose_str):
 
 
 def hash_option(option: str) -> int:
-    if "dispenser" in option:
+    if "dis" in option:
         return 1
     elif "câmera" in option:
         return 2
     return None
 
+def parse_to_json(llm_output: str) -> Dict[str, Any]:
+    """
+    Extracts the first valid JSON object from a string returned by a language model (LLM),
+    removing any surrounding text, headers, or formatting (e.g., markdown or comments).
 
+    Parameters:
+        llm_output (str): The raw output string returned by the LLM.
+
+    Returns:
+        Dict[str, Any]: A Python dictionary representing the parsed JSON object.
+
+    Raises:
+        ValueError: If no JSON is found or the JSON is invalid.
+    """
+    try:
+        match = re.search(r"\{.*\}", llm_output, re.DOTALL)
+        if not match:
+            raise ValueError("No JSON object found in the LLM output.")
+
+        raw_json = match.group(0)
+        return json.loads(raw_json)
+
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse JSON: {e}")
+
+@try_except(default_return="Computer Vision Pipeline ERROR")
 def computer_vision_pipeline(
     database_url: str, medicine_names: Union[str, list], decoder
 ):
@@ -66,6 +103,7 @@ def computer_vision_pipeline(
         detection_pipeline = DetectionPipeline()
         while not medicine_confirmation:
             detection_response = detection_pipeline.run_detection()
+            print(detection_response)
             medication_list = [med.lower() for med in medication_list]
             detection_response = [
                 word.lower() for word in detection_response.split(" ")
@@ -85,6 +123,7 @@ def computer_vision_pipeline(
         decoder.string_to_speech("Esse é o remédio certo pode tomar")
 
 
+@try_except(default_return="Dispenser Pipeline ERROR")
 def dispenser_pipeline(
     database_url: str,
     device_id: str,
@@ -95,6 +134,7 @@ def dispenser_pipeline(
     compartment_stock = get_compartment_stock_by_device(
         {"database_url": database_url, "device_id": device_id}
     )
+    compartment_stock = parse_to_json(compartment_stock)
     compartment_ids = get_stock_ids_by_name(medicine_names, compartment_stock)
     if not compartment_ids or medicine_names > compartment_ids:
         computer_vision_pipeline(database_url, medicine_names, decoder)
@@ -109,29 +149,3 @@ def dispenser_pipeline(
                 "quantity_used": quantity_used,
             }
         )
-
-
-def parse_to_json(llm_output: str) -> Dict[str, Any]:
-    """
-    Extracts the first valid JSON object from a string returned by a language model (LLM),
-    removing any surrounding text, headers, or formatting (e.g., markdown or comments).
-
-    Args:
-        llm_output (str): The raw output string returned by the LLM.
-
-    Returns:
-        Dict[str, Any]: A Python dictionary representing the parsed JSON object.
-
-    Raises:
-        ValueError: If no JSON is found or the JSON is invalid.
-    """
-    try:
-        match = re.search(r"\{.*\}", llm_output, re.DOTALL)
-        if not match:
-            raise ValueError("No JSON object found in the LLM output.")
-
-        raw_json = match.group(0)
-        return json.loads(raw_json)
-
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Failed to parse JSON: {e}")
