@@ -2,7 +2,7 @@
 
 import json
 import re
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Union
 
 from llm_interactions.tools.get_compartment_stock_tool import \
     get_compartment_stock_by_device
@@ -10,6 +10,7 @@ from llm_interactions.tools.get_medication_names_tool import get_medication
 from llm_interactions.tools.update_compartment_stock_amout_tool import \
     update_compartment_stock
 from medicine_recognizer.detection_pipeline import DetectionPipeline
+
 
 def try_except(log_error=True, default_return=None):
     def decorator(func):
@@ -20,7 +21,9 @@ def try_except(log_error=True, default_return=None):
                 if log_error:
                     print(f"[!] Erro em '{func.__name__}': {e}")
                 return default_return
+
         return wrapper
+
     return decorator
 
 
@@ -65,6 +68,7 @@ def hash_option(option: str) -> int:
         return 2
     return None
 
+
 def parse_to_json(llm_output: str) -> Dict[str, Any]:
     """
     Extracts the first valid JSON object from a string returned by a language model (LLM),
@@ -90,14 +94,11 @@ def parse_to_json(llm_output: str) -> Dict[str, Any]:
     except json.JSONDecodeError as e:
         raise ValueError(f"Failed to parse JSON: {e}")
 
+
 @try_except(default_return="Computer Vision Pipeline ERROR")
 def computer_vision_pipeline(
-    database_url: str, medicine_names: Union[str, list], decoder
+    medicine_names: Union[str, list], medication_list, decoder
 ):
-    medication_list = [
-        medication["medication_name"]
-        for medication in get_medication({"database_url": database_url})
-    ]
     for medicine in medicine_names:
         medicine_confirmation = False
         detection_pipeline = DetectionPipeline()
@@ -123,29 +124,48 @@ def computer_vision_pipeline(
         decoder.string_to_speech("Esse é o remédio certo pode tomar")
 
 
-@try_except(default_return="Dispenser Pipeline ERROR")
-def dispenser_pipeline(
-    database_url: str,
-    device_id: str,
-    medicine_names: Union[str, list],
-    quantity_used_list: list,
-    decoder,
-):
-    compartment_stock = get_compartment_stock_by_device(
-        {"database_url": database_url, "device_id": device_id}
-    )
-    compartment_stock = parse_to_json(compartment_stock)
-    compartment_ids = get_stock_ids_by_name(medicine_names, compartment_stock)
-    if not compartment_ids or medicine_names > compartment_ids:
-        computer_vision_pipeline(database_url, medicine_names, decoder)
-    for index in range(len(compartment_ids)):
-        compartment_id = compartment_ids[index]
-        quantity_used = quantity_used_list[index]
+def get_compartments_by_medicine_name(
+    medicine_names: List[str], stock_list: List[Dict]
+) -> List[Dict]:
+    result = []
+    for name in medicine_names:
+        for stock in stock_list:
+            if stock["medicine_name"].lower() == name.lower():
+                result.append(stock)
+                break
+    return result
 
-        update_compartment_stock(
+
+def dispenser_pipeline(
+    device_stock: List[Dict],
+    medicine_names: Union[str, List[str]],
+    medication_list: List[str],
+    quantity_used_list: List[int],
+    decoder,
+) -> List[Dict]:
+    if isinstance(medicine_names, str):
+        medicine_names = [medicine_names]
+
+    compartments = get_compartments_by_medicine_name(medicine_names, device_stock)
+
+    if not compartments or len(compartments) < len(medicine_names):
+        compartments = computer_vision_pipeline(
+            medicine_names, medication_list, decoder
+        )
+
+    updates = []
+    for index in range(len(compartments)):
+        stock = compartments[index]
+        quantity_used = quantity_used_list[index]
+        new_amount = stock["amount"] - quantity_used
+
+        updates.append(
             {
-                "database_url": database_url,
-                "stock_id": compartment_id,
-                "quantity_used": quantity_used,
+                "stock_id": stock["stock_id"],
+                "medicine_name": stock["medicine_name"],
+                "position": stock["position"],
+                "new_amount": new_amount,
             }
         )
+
+    return updates

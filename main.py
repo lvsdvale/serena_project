@@ -95,15 +95,22 @@ def test_serena_assistent(database_url: str, device_id: str):
                 decoder.string_to_speech("Desculpe, não entendi. Pode repetir?")
                 command = decoder.audio_to_string()
             user_interaction_agent = user_interaction_prompt | llm
-            diagnoses = get_diagnoses_by_device(
-                {"database_url": database_url, "device_id": device_id}
-            )
-            prescriptions = get_prescriptions_by_device(
-                {"database_url": database_url, "device_id": device_id}
-            )
+            prescriptions = [
+                {
+                    "prescription_id": 1,
+                    "medication_name": "Dipirona",
+                    "dosage": "1 comprimido",
+                    "duration_time": 2,
+                },
+                {
+                    "prescription_id": 2,
+                    "medication_name": "Loratadina",
+                    "dosage": "1 comprimido",
+                    "duration_time": 2,
+                },
+            ]
             user_interaction_inputs = dict()
             user_interaction_inputs["command"] = command
-            user_interaction_inputs["diagnoses"] = diagnoses
             user_interaction_inputs["prescriptions"] = prescriptions
             response = user_interaction_agent.invoke(user_interaction_inputs)
             print(response.content)
@@ -111,18 +118,10 @@ def test_serena_assistent(database_url: str, device_id: str):
             if parsed_response["medicamento_recomendado"].lower() == "nenhum":
                 decoder.string_to_speech(f"{parsed_response['sugestão']}")
                 continue
-            log_interaction(
-                {
-                    "device_id": device_id,
-                    "database_url": database_url,
-                    "symptom": parsed_response["sintoma"],
-                    "suggestion": parsed_response["sugestão"],
-                }
-            )
             decoder.string_to_speech(
                 f"{parsed_response['sugestão']},você gostaria de tomar via dispenser ou utilizando a câmera"
             )
-            
+            medicine_list = ["Paracetamol", "ibuprofeno", "loratadina", "dipirona"]
             option = decoder.audio_to_string()
             hashed_option = hash_option(option)
             while hashed_option is None:
@@ -138,16 +137,15 @@ def test_serena_assistent(database_url: str, device_id: str):
                 quantity_used_list = list()
                 quantity_used_list.append(quantity_used)
                 dispenser_pipeline(
-                    database_url,
-                    device_id,
                     medicine_names=medicine_name,
+                    medicine_list=medicine_list,
                     quantity_used_list=quantity_used_list,
                     decoder=decoder,
                 )
             if hashed_option == 2:
                 medicine_names = list()
                 medicine_names.append(parsed_response["medicamento_recomendado"])
-                computer_vision_pipeline(database_url, medicine_names, decoder)
+                computer_vision_pipeline(medicine_names, medicine_list, decoder)
 
 
 test_serena_assistent(DATABASE_URL, device_id)
