@@ -136,7 +136,12 @@ def test_serena_assistent(database_url: str, device_id: str):
                 quantity_used = extract_quantity_from_dose(parsed_response["dose"])
                 quantity_used_list = list()
                 quantity_used_list.append(quantity_used)
+                device_stock = [
+                {"stock_id": 1, "medicine_name": "Dipirona", "amount": 14, "position": 0},
+                {"stock_id": 2, "medicine_name": "Ibuprofeno", "amount": 20, "position": 1},
+                ]
                 dispenser_pipeline(
+                    device_stock=device_stock,
                     medicine_names=medicine_name,
                     medicine_list=medicine_list,
                     quantity_used_list=quantity_used_list,
