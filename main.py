@@ -134,8 +134,11 @@ def test_serena_assistent(device_id: str):
                     quantity_used_list=quantity_used_list,
                     decoder=decoder,
                 )
+                print(compartments_update_list)
+                """
                 for compartment_to_update in compartments_update_list:
                     client.update_compartment_amount(compartment_to_update["compartment_id"], compartment_to_update["quantity"])
+                """
 
             if hashed_option == 2:
                 medicine_names = list()
