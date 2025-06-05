@@ -10,7 +10,7 @@ from llm_interactions.tools.get_medication_names_tool import get_medication
 from llm_interactions.tools.update_compartment_stock_amout_tool import \
     update_compartment_stock
 from medicine_recognizer.detection_pipeline import DetectionPipeline
-
+#from dispenser_controller.dispenser import MedicineDispenser
 
 def try_except(log_error=True, default_return=None):
     def decorator(func):
@@ -127,17 +127,19 @@ def computer_vision_pipeline(
 def get_compartments_by_medicine_name(
     medicine_names: List[str], stock_list: List[Dict]
 ) -> List[Dict]:
-    result = []
+    stocks_to_update_list = []
+    index_list = []
     for name in medicine_names:
-        for stock in stock_list:
-            if stock["medicine_name"].lower() == name.lower():
-                result.append(stock)
+        for index in range(len(stock_list)):
+            if stock_list[index]["medication_name"].lower() == name.lower():
+                index_list.append(index + 1)
+                stocks_to_update_list.append(stock_list[index])
                 break
-    return result
+    return stocks_to_update_list, index_list
 
 
 def dispenser_pipeline(
-    device_stock: List[Dict],
+    device_compartments: List[Dict],
     medicine_names: Union[str, List[str]],
     medication_list: List[str],
     quantity_used_list: List[int],
@@ -146,7 +148,7 @@ def dispenser_pipeline(
     if isinstance(medicine_names, str):
         medicine_names = [medicine_names]
 
-    compartments = get_compartments_by_medicine_name(medicine_names, device_stock)
+    compartments, compartments_indexes = get_compartments_by_medicine_name(medicine_names, device_compartments)
 
     if not compartments or len(compartments) < len(medicine_names):
         compartments = computer_vision_pipeline(
@@ -155,16 +157,22 @@ def dispenser_pipeline(
 
     updates = []
     for index in range(len(compartments)):
-        stock = compartments[index]
+        compartment = compartments[index]
         quantity_used = quantity_used_list[index]
-        new_amount = stock["amount"] - quantity_used
+        new_amount = compartment["quantity"] - quantity_used
+        """
+        step_pin = 17
+        dir_pin = 27
+        relay_pin = 22
+        dispenser = MedicineDispenser(step_pin, dir_pin, relay_pin)
+        dispenser.run(compartments_indexes)
+        """
 
         updates.append(
             {
-                "stock_id": stock["stock_id"],
-                "medicine_name": stock["medicine_name"],
-                "position": stock["position"],
-                "new_amount": new_amount,
+                "compartment_id": compartment["compartment_id"],
+                "medication_name": compartment["medication_name"],
+                "quantity": new_amount,
             }
         )
 

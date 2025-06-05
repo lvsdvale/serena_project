@@ -21,10 +21,10 @@ from utils import (computer_vision_pipeline, dispenser_pipeline,
                    extract_quantity_from_dose, get_stock_ids_by_name,
                    hash_option, parse_to_json)
 from voice_decoder.voice_decoder import VoiceDecoder
+from api_consumer import SerenaAPIClient
 
-DATABASE_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
 
-
+"""
 def run_serena_assistent(database_url: str, device_id: str):
     decoder = VoiceDecoder(language="pt-BR", wake_word="Serena")
     while True:
@@ -83,9 +83,10 @@ def run_serena_assistent(database_url: str, device_id: str):
                 medicine_names = list()
                 medicine_names.append(parsed_response["medicamento_recomendado"])
                 computer_vision_pipeline(database_url, medicine_names, decoder)
+                """
 
 
-def test_serena_assistent(database_url: str, device_id: str):
+def test_serena_assistent(device_id: str):
     decoder = VoiceDecoder(language="pt-BR", wake_word="Serena")
     while True:
         if decoder.listen_for_wake_word():
@@ -95,20 +96,8 @@ def test_serena_assistent(database_url: str, device_id: str):
                 decoder.string_to_speech("Desculpe, não entendi. Pode repetir?")
                 command = decoder.audio_to_string()
             user_interaction_agent = user_interaction_prompt | llm
-            prescriptions = [
-                {
-                    "prescription_id": 1,
-                    "medication_name": "Dipirona",
-                    "dosage": "1 comprimido",
-                    "duration_time": 2,
-                },
-                {
-                    "prescription_id": 2,
-                    "medication_name": "Loratadina",
-                    "dosage": "1 comprimido",
-                    "duration_time": 2,
-                },
-            ]
+            client = SerenaAPIClient(email=api_email, password=api_password)
+            prescriptions = client.get_valid_prescriptions(device_id)
             user_interaction_inputs = dict()
             user_interaction_inputs["command"] = command
             user_interaction_inputs["prescriptions"] = prescriptions
@@ -121,7 +110,8 @@ def test_serena_assistent(database_url: str, device_id: str):
             decoder.string_to_speech(
                 f"{parsed_response['sugestão']},você gostaria de tomar via dispenser ou utilizando a câmera"
             )
-            medicine_list = ["Paracetamol", "ibuprofeno", "loratadina", "dipirona"]
+            medicine_list = client.get_medication_list()
+            medicine_list = [medicine["name"] for medicine in medicine_list]
             option = decoder.audio_to_string()
             hashed_option = hash_option(option)
             while hashed_option is None:
@@ -136,21 +126,21 @@ def test_serena_assistent(database_url: str, device_id: str):
                 quantity_used = extract_quantity_from_dose(parsed_response["dose"])
                 quantity_used_list = list()
                 quantity_used_list.append(quantity_used)
-                device_stock = [
-                {"stock_id": 1, "medicine_name": "Dipirona", "amount": 14, "position": 0},
-                {"stock_id": 2, "medicine_name": "Ibuprofeno", "amount": 20, "position": 1},
-                ]
-                dispenser_pipeline(
-                    device_stock=device_stock,
+                device_compartments = client.get_dispenser_status(device_id)
+                compartments_update_list = dispenser_pipeline(
+                    device_compartments=device_compartments,
                     medicine_names=medicine_name,
-                    medicine_list=medicine_list,
+                    medication_list=medicine_list,
                     quantity_used_list=quantity_used_list,
                     decoder=decoder,
                 )
+                for compartment_to_update in compartments_update_list:
+                    client.update_compartment_amount(compartment_to_update["compartment_id"], compartment_to_update["quantity"])
+
             if hashed_option == 2:
                 medicine_names = list()
                 medicine_names.append(parsed_response["medicamento_recomendado"])
                 computer_vision_pipeline(medicine_names, medicine_list, decoder)
 
 
-test_serena_assistent(DATABASE_URL, device_id)
+test_serena_assistent(device_id)

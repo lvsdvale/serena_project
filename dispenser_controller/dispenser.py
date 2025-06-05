@@ -15,7 +15,7 @@ class MedicineDispenser:
 
     TOTAL_SLOTS = 14
     STEPS_PER_SLOT = 14
-    REFERENCE_POSITION = 8  # Mechanical reference slot
+    REFERENCE_POSITION = 8 
 
     def __init__(self, step_pin: int, dir_pin: int, relay_pin: int, motor_delay: float = 0.01):
         """
@@ -82,7 +82,6 @@ class MedicineDispenser:
         GPIO.output(self.relay_pin, GPIO.LOW)
         time.sleep(1.5)
         GPIO.output(self.relay_pin, GPIO.HIGH)
-        time.sleep(1.5)
 
     def run(self, positions: List[int]) -> None:
         """
@@ -96,12 +95,10 @@ class MedicineDispenser:
 
         current_pos = self.current_pos
 
-        # Sort positions by shortest CCW distance from current position
         sorted_positions = sorted(
             positions, key=lambda pos: (current_pos - pos + self.TOTAL_SLOTS) % self.TOTAL_SLOTS
         )
 
-        # Set direction to counterclockwise
         GPIO.output(self.dir_pin, GPIO.LOW)
 
         for target_pos in sorted_positions:
@@ -111,7 +108,6 @@ class MedicineDispenser:
             self._save_position(current_pos)
             self._activate_relay()
 
-        # Return to reference position in clockwise direction
         GPIO.output(self.dir_pin, GPIO.HIGH)
         steps = self._calculate_steps_cw(current_pos, self.REFERENCE_POSITION)
         self._step_motor(steps)
