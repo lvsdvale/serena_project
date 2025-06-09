@@ -182,6 +182,7 @@ class DetectionPipeline:
         stable_required: int = 6
         while cap.isOpened():
             ret, frame = cap.read()
+            print(f"ret value :{ret}")
             if not ret:
                 break
 
