@@ -4,6 +4,8 @@ import json
 import os
 import time
 
+from api_consumer import SerenaAPIClient
+from dispenser_controller.dispenser import MedicineDispenser
 from llm_interactions.config import *
 from llm_interactions.prompt_templates.user_interaction_template import \
     user_interaction_prompt
@@ -21,8 +23,6 @@ from utils import (computer_vision_pipeline, dispenser_pipeline,
                    extract_quantity_from_dose, get_stock_ids_by_name,
                    hash_option, parse_to_json)
 from voice_decoder.voice_decoder import VoiceDecoder
-from api_consumer import SerenaAPIClient
-
 
 """
 def run_serena_assistent(database_url: str, device_id: str):
@@ -87,6 +87,10 @@ def run_serena_assistent(database_url: str, device_id: str):
 
 
 def test_serena_assistent(device_id: str):
+    step_pin = 17
+    dir_pin = 27
+    relay_pin = 22
+    dispenser_controller = MedicineDispenser(step_pin, dir_pin, relay_pin)
     decoder = VoiceDecoder(language="pt-BR", wake_word="Serena")
     while True:
         if decoder.listen_for_wake_word():
@@ -133,6 +137,7 @@ def test_serena_assistent(device_id: str):
                     medication_list=medicine_list,
                     quantity_used_list=quantity_used_list,
                     decoder=decoder,
+                    dispenser_controller=dispenser_controller,
                 )
                 print(compartments_update_list)
                 """

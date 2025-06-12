@@ -10,7 +10,9 @@ from llm_interactions.tools.get_medication_names_tool import get_medication
 from llm_interactions.tools.update_compartment_stock_amout_tool import \
     update_compartment_stock
 from medicine_recognizer.detection_pipeline import DetectionPipeline
-#from dispenser_controller.dispenser import MedicineDispenser
+
+# from dispenser_controller.dispenser import MedicineDispenser
+
 
 def try_except(log_error=True, default_return=None):
     def decorator(func):
@@ -144,11 +146,14 @@ def dispenser_pipeline(
     medication_list: List[str],
     quantity_used_list: List[int],
     decoder,
+    dispenser_controller,
 ) -> List[Dict]:
     if isinstance(medicine_names, str):
         medicine_names = [medicine_names]
 
-    compartments, compartments_indexes = get_compartments_by_medicine_name(medicine_names, device_compartments)
+    compartments, compartments_indexes = get_compartments_by_medicine_name(
+        medicine_names, device_compartments
+    )
 
     if not compartments or len(compartments) < len(medicine_names):
         compartments = computer_vision_pipeline(
@@ -160,13 +165,7 @@ def dispenser_pipeline(
         compartment = compartments[index]
         quantity_used = quantity_used_list[index]
         new_amount = compartment["quantity"] - quantity_used
-        """
-        step_pin = 17
-        dir_pin = 27
-        relay_pin = 22
-        dispenser = MedicineDispenser(step_pin, dir_pin, relay_pin)
-        dispenser.run(compartments_indexes)
-        """
+        dispenser_controller.run(compartments_indexes)
 
         updates.append(
             {
