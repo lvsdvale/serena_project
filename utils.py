@@ -161,11 +161,11 @@ def dispenser_pipeline(
         )
 
     updates = []
+    dispenser_controller.run(compartments_indexes)
     for index in range(len(compartments)):
         compartment = compartments[index]
         quantity_used = quantity_used_list[index]
         new_amount = compartment["quantity"] - quantity_used
-        dispenser_controller.run(compartments_indexes)
 
         updates.append(
             {

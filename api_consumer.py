@@ -1,6 +1,7 @@
-import requests
-from typing import Dict, Any, List, Optional, Callable
 from functools import wraps
+from typing import Any, Callable, Dict, List, Optional
+
+import requests
 
 BASE_URL = "https://serena-api-mn6f.onrender.com"
 
@@ -12,13 +13,6 @@ class SerenaAPIClient:
     """
 
     def __init__(self, email: str, password: str) -> None:
-        """
-        Initializes the client and performs initial login.
-
-        Args:
-            email (str): The user's email address.
-            password (str): The user's password.
-        """
         self.email = email
         self.password = password
         self.token: Optional[str] = None
@@ -33,7 +27,7 @@ class SerenaAPIClient:
         payload = {
             "grant_type": "password",
             "username": self.email,
-            "password": self.password
+            "password": self.password,
         }
         response = requests.post(url, data=payload)
         response.raise_for_status()
@@ -46,14 +40,9 @@ class SerenaAPIClient:
 
     def _auto_reauth(func: Callable) -> Callable:
         """
-        Decorator that retries the API call with re-authentication if token is expired.
-
-        Args:
-            func (Callable): The API method to wrap.
-
-        Returns:
-            Callable: The wrapped function with retry logic.
+        Decorator that retries the API call with re-authentication if the token is expired.
         """
+
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             try:
@@ -63,32 +52,23 @@ class SerenaAPIClient:
                     self.login()
                     return func(self, *args, **kwargs)
                 raise
+
         return wrapper
-    
+
     @_auto_reauth
     def get_medication_list(self) -> List[Dict[str, Any]]:
         """
-        Gets medication list.
-
-        Returns:
-            List[Dict[str, Any]]: A list of compartments with name, amount, and compartment_id.
+        Retrieves the list of available medications from the system.
         """
         url = f"{BASE_URL}/medications"
         response = requests.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
 
-
     @_auto_reauth
     def get_dispenser_status(self, device_id: int) -> List[Dict[str, Any]]:
         """
         Gets the status of the 14 compartments in the dispenser.
-
-        Args:
-            device_id (int): The ID of the device.
-
-        Returns:
-            List[Dict[str, Any]]: A list of compartments with name, amount, and compartment_id.
         """
         url = f"{BASE_URL}/dispenser/by_device/{device_id}"
         response = requests.get(url, headers=self.headers)
@@ -99,12 +79,6 @@ class SerenaAPIClient:
     def get_valid_prescriptions(self, device_id: int) -> List[Dict[str, Any]]:
         """
         Retrieves valid prescriptions for the senior linked to a device.
-
-        Args:
-            device_id (int): The ID of the device.
-
-        Returns:
-            List[Dict[str, Any]]: A list of valid prescription records.
         """
         url = f"{BASE_URL}/prescriptions/by_device/{device_id}"
         response = requests.get(url, headers=self.headers)
@@ -112,41 +86,36 @@ class SerenaAPIClient:
         return response.json()
 
     @_auto_reauth
-    def update_compartment_amount(self, compartment_id: int, quantity: int) -> Dict[str, Any]:
+    def update_compartment_amount(
+        self, compartment_id: str, medication_id: str, quantity: int
+    ) -> Dict[str, Any]:
         """
         Updates the amount of medication in a specific compartment.
-
-        Args:
-            compartment_id (int): The ID of the compartment.
-            new_amount (int): The new amount of medication.
-
-        Returns:
-            Dict[str, Any]: The updated compartment data.
         """
         url = f"{BASE_URL}/compartment/{compartment_id}"
-        payload = {"quantity": quantity}
+        payload = {"quantity": quantity, "medication_id": medication_id}
         response = requests.patch(url, json=payload, headers=self.headers)
         response.raise_for_status()
         return response.json()
 
     @_auto_reauth
-    def create_symptom(self, senior_id: int, symptom_name: str, description: str) -> Dict[str, Any]:
+    def create_symptom_by_device(
+        self,
+        device_id: int,
+        senior_id: int,
+        symptom_name: str,
+        description: str,
+        pain_level: int,
+    ) -> Dict[str, Any]:
         """
-        Records a new symptom reported by a senior.
-
-        Args:
-            senior_id (int): The ID of the senior.
-            symptom_name (str): The name of the symptom.
-            description (str): A description of the symptom.
-
-        Returns:
-            Dict[str, Any]: The created symptom record.
+        Records a new symptom reported by a senior, based on the device ID.
         """
-        url = f"{BASE_URL}/symptoms/"
+        url = f"{BASE_URL}/symptoms/by_device/{device_id}"
         payload = {
-            "senior_id": senior_id,
             "name": symptom_name,
-            "description": description
+            "description": description,
+            "pain_level": pain_level,
+            "senior_id": str(senior_id),
         }
         response = requests.post(url, json=payload, headers=self.headers)
         response.raise_for_status()
@@ -156,14 +125,45 @@ class SerenaAPIClient:
     def get_senior_id_by_device(self, device_id: int) -> Dict[str, Any]:
         """
         Retrieves the senior ID linked to a device.
-
-        Args:
-            device_id (int): The ID of the device.
-
-        Returns:
-            Dict[str, Any]: A dictionary containing the senior_id.
         """
         url = f"{BASE_URL}/senior/by_device/{device_id}"
         response = requests.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
+
+    @_auto_reauth
+    def get_enriched_prescriptions(self, device_id: int) -> List[Dict[str, Any]]:
+        """
+        Returns a list of valid prescriptions enriched with medication names and descriptions.
+
+        Each enriched prescription contains:
+        - prescription_id
+        - medication_name
+        - medication_description
+        - frequency
+        - dosage
+        - start_date
+        - end_date
+        - senior_id
+        """
+        prescriptions = self.get_valid_prescriptions(device_id)
+        medications = self.get_medication_list()
+
+        med_lookup: Dict[str, Dict[str, Any]] = {m["id"]: m for m in medications}
+
+        enriched: List[Dict[str, Any]] = []
+        for p in prescriptions:
+            med_info = med_lookup.get(p["medication_id"], {})
+            enriched.append(
+                {
+                    "prescription_id": p["id"],
+                    "medication_name": med_info.get("name", "Unknown"),
+                    "medication_description": med_info.get("description", ""),
+                    "frequency": p["frequency"],
+                    "dosage": p["dosage"],
+                    "start_date": p["start_date"],
+                    "end_date": p["end_date"],
+                    "senior_id": p["senior_id"],
+                }
+            )
+        return enriched
