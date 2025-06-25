@@ -78,7 +78,7 @@ def run_serena_assistent(device_id: str):
                 quantity_used = extract_quantity_from_dose(parsed_response["dose"])
                 quantity_used_list = list()
                 quantity_used_list.append(quantity_used)
-                device_compartments = client.get_dispenser_status(device_id)
+                device_compartments = client.get_full_dispenser_status(device_id)
                 compartments_update_list = dispenser_pipeline(
                     device_compartments=device_compartments,
                     medicine_names=medicine_name,
@@ -88,10 +88,12 @@ def run_serena_assistent(device_id: str):
                     dispenser_controller=dispenser_controller,
                 )
                 print(compartments_update_list)
-                """
                 for compartment_to_update in compartments_update_list:
-                    client.update_compartment_amount(compartment_to_update["compartment_id"], compartment_to_update["quantity"])
-                """
+                    client.update_compartment_amount(
+                        compartment_to_update["compartment_id"],
+                        compartment_to_update["medication_id"],
+                        compartment_to_update["quantity"],
+                    )
 
             if hashed_option == 2:
                 medicine_names = list()

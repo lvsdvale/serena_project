@@ -69,6 +69,12 @@ class SerenaAPIClient:
     def get_dispenser_status(self, device_id: int) -> List[Dict[str, Any]]:
         """
         Gets the status of the 14 compartments in the dispenser.
+
+        Returns:
+            A list of dictionaries with:
+            - compartment_id
+            - medication_name
+            - quantity
         """
         url = f"{BASE_URL}/dispenser/by_device/{device_id}"
         response = requests.get(url, headers=self.headers)
@@ -132,6 +138,23 @@ class SerenaAPIClient:
         return response.json()
 
     @_auto_reauth
+    def get_compartment_by_id(self, compartment_id: str) -> Dict[str, Any]:
+        """
+        Retrieves information about a specific compartment by its ID.
+
+        Returns:
+            A dictionary with:
+            - medication_id
+            - quantity
+            - compartment_id
+            - dispenser_id
+        """
+        url = f"{BASE_URL}/compartment/{compartment_id}"
+        response = requests.get(url, headers=self.headers)
+        response.raise_for_status()
+        return response.json()
+
+    @_auto_reauth
     def get_enriched_prescriptions(self, device_id: int) -> List[Dict[str, Any]]:
         """
         Returns a list of valid prescriptions enriched with medication names and descriptions.
@@ -148,7 +171,6 @@ class SerenaAPIClient:
         """
         prescriptions = self.get_valid_prescriptions(device_id)
         medications = self.get_medication_list()
-
         med_lookup: Dict[str, Dict[str, Any]] = {m["id"]: m for m in medications}
 
         enriched: List[Dict[str, Any]] = []
@@ -167,3 +189,30 @@ class SerenaAPIClient:
                 }
             )
         return enriched
+
+    @_auto_reauth
+    def get_full_dispenser_status(self, device_id: int) -> List[Dict[str, Any]]:
+        """
+        Returns enriched dispenser status for all compartments of a given device.
+
+        Each item includes:
+        - compartment_id
+        - medication_name
+        - medication_id
+        - quantity
+        """
+        compartments = self.get_dispenser_status(device_id)
+        enriched_status = []
+
+        for c in compartments:
+            compartment_info = self.get_compartment_by_id(c["compartment_id"])
+            enriched_status.append(
+                {
+                    "compartment_id": c["compartment_id"],
+                    "medication_name": c["medication_name"],
+                    "medication_id": compartment_info.get("medication_id"),
+                    "quantity": c["quantity"],
+                }
+            )
+
+        return enriched_status
