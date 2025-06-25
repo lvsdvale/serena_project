@@ -48,7 +48,7 @@ class MedicineDispenser:
         GPIO.setup(self.relay_pin, GPIO.OUT)
 
         # Relay starts in OFF position (HIGH = OFF for active-low relay)
-        GPIO.output(self.relay_pin, GPIO.HIGH)
+        # GPIO.output(self.relay_pin, GPIO.HIGH)
 
         # Load last known position or default to reference
         self.current_pos = self._load_last_position()
@@ -126,9 +126,10 @@ class MedicineDispenser:
         """
         Activate the relay to dispense the medicine.
         """
-        GPIO.output(self.relay_pin, GPIO.LOW)  # Relay ON (active-low)
+        GPIO.output(self.relay_pin, GPIO.HIGH)  # Relay ON (active-low)
         time.sleep(1.5)  # Dispense duration
-        GPIO.output(self.relay_pin, GPIO.HIGH)  # Relay OFF
+        GPIO.output(self.relay_pin, GPIO.LOW)  # Relay OFF
+        time.sleep(1.5)
 
     def run(self, positions: List[int]) -> None:
         """
