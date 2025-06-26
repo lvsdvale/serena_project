@@ -175,11 +175,11 @@ class DetectionPipeline:
         Returns:
             str: Extracted text from the detected medicine box.
         """
-        if self.light_controller:
+        if self.light_controller is not None:
             self.light_controller.green_on()
 
         # Abre a câmera (mude o índice se necessário)
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture("tcp://127.0.0.1:8888", cv2.CAP_FFMPEG)
         if not cap.isOpened():
             raise RuntimeError("Failed to open the camera.")
 
@@ -190,7 +190,7 @@ class DetectionPipeline:
             raise RuntimeError("Failed to capture frame from camera.")
 
         # Executa a detecção YOLO
-        if self.light_controller:
+        if self.light_controller is not None:
             self.light_controller.blue_on()
 
         results = self.yolo_model(frame)[0]

@@ -1,15 +1,14 @@
 """This file implements a OCR class for medicine names"""
 
-import os
 import re
 from typing import Optional
 
 import cv2
-import easyocr
 import nltk
 import numpy as np
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+from pytesseract import image_to_string
 
 
 class OCRPipeline:
@@ -18,31 +17,41 @@ class OCRPipeline:
 
     The OCR process includes:
     - Reading and preprocessing the input image
-    - Extracting text using EasyOCR
+    - Extracting text using Tesseract OCR
     - Removing Portuguese stopwords from the extracted text
 
     Attributes:
-        raw_text_output (str): Raw text output from EasyOCR.
+        raw_text_output (str): Raw text output from Tesseract OCR.
         processed_text_output (str): Cleaned text output with stopwords removed.
     """
 
     def __init__(self):
         """
-        Initializes the OCRPipeline class, sets up EasyOCR reader, and downloads necessary NLTK resources.
+        Initializes the OCRPipeline class and downloads necessary NLTK resources.
         """
         self.__raw_text_output: Optional[str] = None
         self.__processed_text_output: Optional[str] = None
-        self.reader = easyocr.Reader(["pt", "en"], gpu=False)
 
         nltk.download("stopwords")
         nltk.download("punkt")
+        nltk.download("punkt_tab")
 
     @property
     def raw_text_output(self) -> Optional[str]:
+        """Returns the raw text output from the OCR process."""
         return self.__raw_text_output
 
     @raw_text_output.setter
     def raw_text_output(self, raw_text_output: Optional[str]) -> None:
+        """
+        Sets the raw text output.
+
+        Parameters:
+            raw_text_output (Optional[str]): The raw text extracted from the image.
+
+        Raises:
+            TypeError: If the input is not a string or None.
+        """
         if not isinstance(raw_text_output, str) and raw_text_output is not None:
             raise TypeError(
                 f"last raw output must be str or None, instead got {type(raw_text_output)}"
@@ -51,10 +60,20 @@ class OCRPipeline:
 
     @property
     def processed_text_output(self) -> Optional[str]:
+        """Returns the cleaned, processed text output with stopwords removed."""
         return self.__processed_text_output
 
     @processed_text_output.setter
     def processed_text_output(self, processed_text_output: Optional[str]) -> None:
+        """
+        Sets the processed text output.
+
+        Parameters:
+            processed_text_output (Optional[str]): Cleaned version of the OCR text.
+
+        Raises:
+            TypeError: If the input is not a string or None.
+        """
         if (
             not isinstance(processed_text_output, str)
             and processed_text_output is not None
@@ -67,20 +86,26 @@ class OCRPipeline:
     def read_image(self, image_path: str):
         """
         Reads and converts the image to RGB format.
+
+        Parameters:
+            image_path (str): Path to the input image.
+
+        Returns:
+            image: Preprocessed RGB image.
         """
-        if not os.path.exists(image_path):
-            raise FileNotFoundError(f"Image file not found: {image_path}")
-
         image = cv2.imread(image_path)
-        if image is None:
-            raise ValueError(f"Failed to load image from path: {image_path}")
-
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
 
     def preprocess_image(self, image: np.ndarray) -> np.ndarray:
         """
         Preprocess the image for better OCR performance.
+
+        parameters:
+            img (np.ndarray): RGB input image.
+
+        Returns:
+            np.ndarray: Thresholded and sharpened grayscale image.
         """
         gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
         blur = cv2.GaussianBlur(gray, (3, 3), 0)
@@ -93,7 +118,7 @@ class OCRPipeline:
 
     def process_output(self) -> None:
         """
-        Processes the raw OCR text by removing Portuguese stopwords.
+        Processes the raw OCR text by removing Portuguese stopwords and storing the result.
         """
         stopwords_pt = set(stopwords.words("portuguese"))
         if self.raw_text_output is not None:
@@ -109,20 +134,31 @@ class OCRPipeline:
             processed_text = " ".join(clean_words)
             self.processed_text_output = processed_text
 
-    def image_to_string(self, image: np.array) -> None:
+    def image_to_string(self, image: str) -> None:
         """
-        Executes the OCR pipeline: extracts text from image and processes it.
+        Executes the OCR pipeline: reads the image, extracts text, and processes it.
+
+        Parameters:
+            image_path (str): Path to the input image.
+
+        Prints:
+            str: The cleaned, processed OCR output.
         """
-        results = self.reader.readtext(image, detail=0)
-        self.raw_text_output = " ".join(results)
+        self.raw_text_output = image_to_string(image)
         self.process_output()
-        
+        print(self.processed_text_output)
 
     def image_path_to_string(self, image_path: str) -> None:
         """
-        Executes the OCR pipeline: loads image, extracts text, and processes it.
+        Executes the OCR pipeline: reads the image, extracts text, and processes it.
+
+        Parameters:
+            image_path (str): Path to the input image.
+
+        Prints:
+            str: The cleaned, processed OCR output.
         """
         image = self.read_image(image_path)
-        results = self.reader.readtext(image, detail=0)
-        self.raw_text_output = " ".join(results)
+        self.raw_text_output = image_to_string(image)
         self.process_output()
+        print(self.processed_text_output)

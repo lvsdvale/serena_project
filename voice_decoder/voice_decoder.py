@@ -86,9 +86,9 @@ class VoiceDecoder:
 
                     if self.wake_word in phrase:
                         print("Wake word detected!")
-                        if self.light_controller:
+                        if self.light_controller is not None:
                             self.light_controller.green_on()
-                        if self.light_controller:
+                        if self.light_controller is not None:
                             self.light_controller.blue_on()
                         self.string_to_speech("estou ouvindo no que posso ajudar")
                         return True
