@@ -1,4 +1,3 @@
-import os
 import time
 from typing import List
 
@@ -7,171 +6,120 @@ import RPi.GPIO as GPIO
 
 class MedicineDispenser:
     """
-    Class to control a stepper motor-based medicine dispenser using a relay.
-
-    The dispenser consists of a rotating wheel with slots for medicine.
-    The stepper motor rotates to the desired slots in counterclockwise order,
-    activates a relay to dispense the dose, and finally returns to a reference position.
+    This class controls a rotary dispenser using a stepper motor and a relay.
+    It rotates to a list of specified compartments, triggers a relay to release content,
+    and then returns to a reference position (compartment 8).
     """
 
-    TOTAL_SLOTS = 14  # Total number of compartments on the wheel
-    STEPS_PER_SLOT = 14  # Steps required to move between adjacent slots
-    REFERENCE_POSITION = 8  # Slot to return to after dispensing
-
-    def __init__(
-        self, step_pin: int, dir_pin: int, relay_pin: int, motor_delay: float = 0.01
-    ):
+    def __init__(self, step_pin: int = 17, dir_pin: int = 27, relay_pin: int = 22):
         """
-        Initialize GPIO pins and internal state.
+        Initializes the GPIO pins and internal parameters.
 
-        Args:
-            step_pin (int): GPIO pin connected to the step signal of the stepper driver.
-            dir_pin (int): GPIO pin connected to the direction signal of the stepper driver.
-            relay_pin (int): GPIO pin connected to the relay module.
-            motor_delay (float): Delay between motor steps (controls speed).
+        :param step_pin: GPIO pin connected to the STEP input of the stepper driver.
+        :param dir_pin: GPIO pin connected to the DIR input of the stepper driver.
+        :param relay_pin: GPIO pin connected to the relay module.
         """
-        self.step_pin = step_pin
-        self.dir_pin = dir_pin
-        self.relay_pin = relay_pin
-        self.motor_delay = motor_delay
-        self.position_file = "last_position.txt"
+        self.STEP_PIN = step_pin
+        self.DIR_PIN = dir_pin
+        self.RELAY_PIN = relay_pin
 
-        # Set GPIO mode if not already set
-        if GPIO.getmode() is None:
-            GPIO.setmode(GPIO.BCM)
+        self.delay_motor = 0.01  # 10 milliseconds = 10000 microseconds
+        self.total_compartments = 14
+        self.steps_per_compartment = 14
+        self.reference_position = 8
 
+        GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
-
-        # Configure pins
-        GPIO.setup(self.step_pin, GPIO.OUT)
-        GPIO.setup(self.dir_pin, GPIO.OUT)
-        GPIO.setup(self.relay_pin, GPIO.OUT)
-
-        # Relay starts in OFF position (HIGH = OFF for active-low relay)
-        # GPIO.output(self.relay_pin, GPIO.HIGH)
-
-        # Load last known position or default to reference
-        self.current_pos = self._load_last_position()
-
-    def _load_last_position(self) -> int:
-        """
-        Load the last known position of the motor from a file.
-
-        Returns:
-            int: The slot index (0 to TOTAL_SLOTS - 1).
-        """
-        if os.path.exists(self.position_file):
-            try:
-                with open(self.position_file, "r") as f:
-                    pos = int(f.read().strip())
-                    if 0 <= pos < self.TOTAL_SLOTS:
-                        return pos
-            except Exception:
-                pass
-        return self.REFERENCE_POSITION
-
-    def _save_position(self, pos: int) -> None:
-        """
-        Save the current motor position to file.
-
-        Args:
-            pos (int): Slot index to save.
-        """
-        with open(self.position_file, "w") as f:
-            f.write(str(pos))
-
-    def _calculate_steps_ccw(self, start: int, end: int) -> int:
-        """
-        Calculate the number of steps counterclockwise from start to end.
-
-        Args:
-            start (int): Current position.
-            end (int): Target position.
-
-        Returns:
-            int: Number of motor steps required.
-        """
-        delta = (start - end + self.TOTAL_SLOTS) % self.TOTAL_SLOTS
-        return delta * self.STEPS_PER_SLOT
-
-    def _calculate_steps_cw(self, start: int, end: int) -> int:
-        """
-        Calculate the number of steps clockwise from start to end.
-
-        Args:
-            start (int): Current position.
-            end (int): Target position.
-
-        Returns:
-            int: Number of motor steps required.
-        """
-        delta = (end - start + self.TOTAL_SLOTS) % self.TOTAL_SLOTS
-        return delta * self.STEPS_PER_SLOT
-
-    def _step_motor(self, steps: int) -> None:
-        """
-        Rotate the stepper motor by a given number of steps.
-
-        Args:
-            steps (int): Number of steps to move.
-        """
-        for _ in range(steps):
-            GPIO.output(self.step_pin, GPIO.HIGH)
-            time.sleep(self.motor_delay)
-            GPIO.output(self.step_pin, GPIO.LOW)
-            time.sleep(self.motor_delay)
-        time.sleep(1)  # Short pause after movement
-
-    def _activate_relay(self) -> None:
-        """
-        Activate the relay to dispense the medicine.
-        """
-        GPIO.output(self.relay_pin, GPIO.HIGH)  # Relay ON (active-low)
-        time.sleep(1.5)  # Dispense duration
-        GPIO.output(self.relay_pin, GPIO.LOW)  # Relay OFF
-        time.sleep(1.5)
+        GPIO.setup(self.STEP_PIN, GPIO.OUT)
+        GPIO.setup(self.DIR_PIN, GPIO.OUT)
+        GPIO.setup(self.RELAY_PIN, GPIO.OUT)
 
     def run(self, positions: List[int]) -> None:
         """
-        Rotate and dispense from the specified slots.
+        Executes a dispensing sequence by rotating through specified compartments
+        and activating the relay at each stop.
 
-        Args:
-            positions (List[int]): List of slot indices to activate (0 to TOTAL_SLOTS - 1).
+        :param positions: List of compartment indices to activate.
         """
-        # Filter invalid positions
-        positions = [pos for pos in positions if 0 <= pos < self.TOTAL_SLOTS]
-
         if not positions:
-            print("No valid slot positions provided.")
             return
 
-        current_pos = self.current_pos
+        current_pos = self.reference_position
 
-        # Sort positions by CCW distance from current position
+        # Sort positions by anti-clockwise distance from reference
         sorted_positions = sorted(
             positions,
-            key=lambda pos: (current_pos - pos + self.TOTAL_SLOTS) % self.TOTAL_SLOTS,
+            key=lambda x: (self.reference_position - x + self.total_compartments)
+            % self.total_compartments,
         )
 
-        # Set direction to counterclockwise
-        GPIO.output(self.dir_pin, GPIO.LOW)
+        # Rotate to first position (anti-clockwise)
+        GPIO.output(self.DIR_PIN, GPIO.LOW)
+        steps = self._steps_anticlockwise(current_pos, sorted_positions[0])
+        self._rotate_steps(steps)
+        current_pos = sorted_positions[0]
+        time.sleep(1)
+        self._trigger_relay()
 
-        for target_pos in sorted_positions:
-            steps = self._calculate_steps_ccw(current_pos, target_pos)
-            self._step_motor(steps)
-            current_pos = target_pos
-            self._save_position(current_pos)
-            self._activate_relay()
+        # Rotate through the rest of the positions
+        for pos in sorted_positions[1:]:
+            steps = self._steps_anticlockwise(current_pos, pos)
+            self._rotate_steps(steps)
+            current_pos = pos
+            time.sleep(1)
+            self._trigger_relay()
 
-        # Return to reference position
-        GPIO.output(self.dir_pin, GPIO.HIGH)  # Set direction to clockwise
-        steps = self._calculate_steps_cw(current_pos, self.REFERENCE_POSITION)
-        self._step_motor(steps)
-        self.current_pos = self.REFERENCE_POSITION
-        self._save_position(self.current_pos)
+        # Return to reference position (clockwise)
+        GPIO.output(self.DIR_PIN, GPIO.HIGH)
+        steps = self._steps_clockwise(current_pos, self.reference_position)
+        self._rotate_steps(steps)
+
+    def _steps_anticlockwise(self, start: int, end: int) -> int:
+        """
+        Calculates the number of steps to move anti-clockwise.
+
+        :param start: Starting compartment.
+        :param end: Destination compartment.
+        :return: Total number of motor steps.
+        """
+        delta = (start - end + self.total_compartments) % self.total_compartments
+        return delta * self.steps_per_compartment
+
+    def _steps_clockwise(self, start: int, end: int) -> int:
+        """
+        Calculates the number of steps to move clockwise.
+
+        :param start: Starting compartment.
+        :param end: Destination compartment.
+        :return: Total number of motor steps.
+        """
+        delta = (end - start + self.total_compartments) % self.total_compartments
+        return delta * self.steps_per_compartment
+
+    def _rotate_steps(self, total_steps: int) -> None:
+        """
+        Rotates the stepper motor a given number of steps.
+
+        :param total_steps: Number of steps to rotate.
+        """
+        for _ in range(total_steps):
+            GPIO.output(self.STEP_PIN, GPIO.HIGH)
+            time.sleep(self.delay_motor)
+            GPIO.output(self.STEP_PIN, GPIO.LOW)
+            time.sleep(self.delay_motor)
+        time.sleep(1)
+
+    def _trigger_relay(self) -> None:
+        """
+        Activates the relay to dispense the compartment content.
+        """
+        GPIO.output(self.RELAY_PIN, GPIO.HIGH)
+        time.sleep(1.5)
+        GPIO.output(self.RELAY_PIN, GPIO.LOW)
+        time.sleep(1.5)
 
     def cleanup(self) -> None:
         """
-        Release GPIO resources.
+        Cleans up the GPIO pins to release hardware resources.
         """
         GPIO.cleanup()

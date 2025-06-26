@@ -7,22 +7,27 @@ from gtts import gTTS
 from pydub import AudioSegment
 from pydub.playback import play
 
+
 class VoiceDecoder:
     """
     A class that provides voice interaction functionalities including wake word detection,
     speech-to-text conversion, and text-to-speech synthesis.
     """
 
-    def __init__(self, language: str = "pt-br", wake_word: str = "Serena"):
+    def __init__(
+        self, language: str = "pt-br", light_controller=None, wake_word: str = "Serena"
+    ):
         """
         Initializes the VoiceDecoder with language and wake word.
 
         :param language: Language code for speech recognition (default is 'pt-BR').
         :param wake_word: The word used to activate the assistant.
+        :param light_controller: the light controller to assist user.
         """
         self.recognizer = sr.Recognizer()
         self.language = language
         self.wake_word = wake_word.lower()
+        self.light_controller = light_controller
 
     def string_to_speech(self, text: str) -> None:
         """
@@ -32,7 +37,7 @@ class VoiceDecoder:
         """
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-            tts = gTTS(text, lang='pt')
+            tts = gTTS(text, lang="pt")
             tts.save(fp.name)
             audio = AudioSegment.from_file(fp.name, format="mp3")
             play(audio)

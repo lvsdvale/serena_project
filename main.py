@@ -57,7 +57,7 @@ def run_serena_assistent(device_id: str):
             while not option.strip():
                 decoder.string_to_speech("Desculpe, não entendi. Pode repetir?")
                 option = decoder.audio_to_string()
-            if "não" in option.to_lower():
+            if "não" in option.lower():
                 continue
             decoder.string_to_speech(
                 f"você gostaria de tomar o medicamento pela camêra ou pelo dispenser?"
