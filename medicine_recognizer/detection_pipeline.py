@@ -4,8 +4,6 @@ of medicine packages using a YOLO model and extracts text via OCR.
 """
 
 import os
-import subprocess
-import time
 from typing import Optional
 
 import cv2
@@ -14,6 +12,9 @@ import ultralytics
 from ultralytics import YOLO
 
 from medicine_recognizer.ocr_pipeline import OCRPipeline
+
+import subprocess
+import time
 
 # from ocr_pipeline import OCRPipeline
 
@@ -183,25 +184,14 @@ class DetectionPipeline:
         image_path = "/tmp/captured.jpg"
 
         try:
-            # Captura a imagem usando libcamera-jpeg
+
             subprocess.run(
-                [
-                    "libcamera-jpeg",
-                    "-o",
-                    image_path,
-                    "-n",
-                    "--width",
-                    "640",
-                    "--height",
-                    "480",
-                ],
-                check=True,
+                ["libcamera-still", "-o", image_path, "-n", "--width", "640", "--height", "480"],
+                check=True
             )
 
-            # Aguarda um pouco para garantir que a imagem seja salva
             time.sleep(1)
 
-            # Lê a imagem capturada
             frame = cv2.imread(image_path)
             if frame is None:
                 raise RuntimeError("Failed to load captured image.")
