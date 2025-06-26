@@ -4,6 +4,8 @@ of medicine packages using a YOLO model and extracts text via OCR.
 """
 
 import os
+import subprocess
+import time
 from typing import Optional
 
 import cv2
@@ -169,7 +171,7 @@ class DetectionPipeline:
 
     def run_detection(self) -> str:
         """
-        Captures a single image from the camera, applies YOLO detection,
+        Captures a single image using subprocess, applies YOLO detection,
         runs OCR on the first detected box, and returns the extracted text.
 
         Returns:
@@ -178,27 +180,44 @@ class DetectionPipeline:
         if self.light_controller is not None:
             self.light_controller.green_on()
 
-        # Abre a câmera (mude o índice se necessário)
-        cap = cv2.VideoCapture("tcp://127.0.0.1:8888", cv2.CAP_FFMPEG)
-        if not cap.isOpened():
-            raise RuntimeError("Failed to open the camera.")
+        image_path = "/tmp/captured.jpg"
 
-        ret, frame = cap.read()
-        cap.release()
+        try:
+            # Captura a imagem usando libcamera-jpeg
+            subprocess.run(
+                [
+                    "libcamera-jpeg",
+                    "-o",
+                    image_path,
+                    "-n",
+                    "--width",
+                    "640",
+                    "--height",
+                    "480",
+                ],
+                check=True,
+            )
 
-        if not ret:
-            raise RuntimeError("Failed to capture frame from camera.")
+            # Aguarda um pouco para garantir que a imagem seja salva
+            time.sleep(1)
 
-        # Executa a detecção YOLO
-        if self.light_controller is not None:
-            self.light_controller.blue_on()
+            # Lê a imagem capturada
+            frame = cv2.imread(image_path)
+            if frame is None:
+                raise RuntimeError("Failed to load captured image.")
 
-        results = self.yolo_model(frame)[0]
+            if self.light_controller is not None:
+                self.light_controller.blue_on()
 
-        if len(results.boxes) > 0:
-            x1, y1, x2, y2 = map(int, results.boxes[0].xyxy[0])
-            crop = frame[y1:y2, x1:x2]
-            text = self.process_ocr(crop)
-            return text.strip()
+            results = self.yolo_model(frame)[0]
 
-        return ""
+            if len(results.boxes) > 0:
+                x1, y1, x2, y2 = map(int, results.boxes[0].xyxy[0])
+                crop = frame[y1:y2, x1:x2]
+                text = self.process_ocr(crop)
+                return text.strip()
+
+            return ""
+
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"Failed to capture image with subprocess: {e}")
