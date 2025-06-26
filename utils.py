@@ -154,13 +154,19 @@ def dispenser_pipeline(
     compartments, compartments_indexes = get_compartments_by_medicine_name(
         medicine_names, device_compartments
     )
-
-    if not compartments or len(compartments) < len(medicine_names):
-        compartments = computer_vision_pipeline(
-            medicine_names, medication_list, decoder
-        )
-
     updates = []
+    if not compartments or len(compartments) < len(medicine_names):
+        decoder.string_to_speech(
+            "O remédio sugerido não se encontra no dispenser, você gostária de utilizar a camera"
+        )
+        command = decoder.audio_to_string()
+        while not command.strip():
+            decoder.string_to_speech("Desculpe, não entendi. Pode repetir?")
+            command = decoder.audio_to_string()
+        if "sim" in command.lower():
+            computer_vision_pipeline(medicine_names, medication_list, decoder)
+        return updates
+
     dispenser_controller.run(compartments_indexes)
     for index in compartments_indexes:
         compartment = compartments[index]
