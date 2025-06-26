@@ -6,6 +6,7 @@ import time
 
 from api_consumer import SerenaAPIClient
 from dispenser_controller.dispenser import MedicineDispenser
+from light_controller import RGBLed
 from llm_interactions.config import *
 from llm_interactions.prompt_templates.user_interaction_template import \
     user_interaction_prompt
@@ -21,8 +22,12 @@ def run_serena_assistent(device_id: str):
     dir_pin = 27
     relay_pin = 22
     dispenser_controller = MedicineDispenser(step_pin, dir_pin, relay_pin)
-    decoder = VoiceDecoder(language="pt-BR", wake_word="Serena")
+    light_controller = RGBLed()
+    decoder = VoiceDecoder(
+        language="pt-BR", light_controller=light_controller, wake_word="Serena"
+    )
     while True:
+        light_controller.blue_on()
         if decoder.listen_for_wake_word():
             command = decoder.audio_to_string()
             print(command)

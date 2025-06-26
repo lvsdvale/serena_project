@@ -2,6 +2,7 @@
 
 import json
 import re
+import time
 from typing import Any, Dict, List, Union
 
 from llm_interactions.tools.get_compartment_stock_tool import \
@@ -99,21 +100,49 @@ def parse_to_json(llm_output: str) -> Dict[str, Any]:
 
 @try_except(default_return="Computer Vision Pipeline ERROR")
 def computer_vision_pipeline(
-    medicine_names: Union[str, list], medication_list, decoder
+    medicine_names: Union[str, list], medication_list, decoder, timeout: int = 90
 ):
+    """
+    Runs a vision-based medication recognition pipeline with a timeout.
+
+    Args:
+        medicine_names (Union[str, list]): Name or list of expected medicines.
+        medication_list (list): List of valid medications in the system.
+        decoder: Decoder object with a string_to_speech() method.
+        timeout (int): Maximum time (in seconds) to confirm each medicine.
+    """
+    if isinstance(medicine_names, str):
+        medicine_names = [medicine_names]
+
+    decoder.string_to_speech(
+        "Iniciando reconhecimento do medicamento, deixa caixa próxima a camera"
+    )
+
     for medicine in medicine_names:
         medicine_confirmation = False
         detection_pipeline = DetectionPipeline()
+        start_time = time.time()
+
         while not medicine_confirmation:
+            # Check for timeout
+            elapsed_time = time.time() - start_time
+            if elapsed_time > timeout:
+                decoder.string_to_speech(
+                    f"Tempo esgotado para identificar o remédio {medicine}"
+                )
+                break  # or raise TimeoutError("Timeout during medicine confirmation")
+
             detection_response = detection_pipeline.run_detection()
             print(detection_response)
+
             medication_list = [med.lower() for med in medication_list]
-            detection_response = [
+            detection_response_words = [
                 word.lower() for word in detection_response.split(" ")
             ]
-            medication_found = set(detection_response) & set(medication_list)
+            medication_found = set(detection_response_words) & set(medication_list)
+
             if medication_found:
-                if medicine.lower() not in detection_response:
+                if medicine.lower() not in detection_response_words:
                     decoder.string_to_speech(
                         f"Esse não é o remédio correto, o remédio correto é {medicine}, você mostrou o {list(medication_found)[0]}"
                     )
@@ -123,7 +152,9 @@ def computer_vision_pipeline(
                 decoder.string_to_speech(
                     "O Remédio mostrado está fora da base de dados"
                 )
-        decoder.string_to_speech("Esse é o remédio certo pode tomar")
+
+        if medicine_confirmation:
+            decoder.string_to_speech("Esse é o remédio certo, pode tomar")
 
 
 def get_compartments_by_medicine_name(

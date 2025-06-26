@@ -51,7 +51,11 @@ class VoiceDecoder:
         with sr.Microphone() as source:
             print("Listening for a command...")
             self.recognizer.adjust_for_ambient_noise(source, duration=1.2)
+            if self.light_controller is not None:
+                self.light_controller.blue_flashing()
             audio = self.recognizer.listen(source, phrase_time_limit=6)
+            if self.light_controller is not None:
+                self.light_controller.blue_on()
 
         try:
             text = self.recognizer.recognize_google(audio, language=self.language)
