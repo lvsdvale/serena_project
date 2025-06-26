@@ -91,6 +91,7 @@ def run_serena_assistent(device_id: str):
                     quantity_used_list=quantity_used_list,
                     decoder=decoder,
                     dispenser_controller=dispenser_controller,
+                    light_controller=light_controller,
                 )
                 print(compartments_update_list)
                 for compartment_to_update in compartments_update_list:
@@ -103,7 +104,12 @@ def run_serena_assistent(device_id: str):
             if hashed_option == 2:
                 medicine_names = list()
                 medicine_names.append(parsed_response["medicamento_recomendado"])
-                computer_vision_pipeline(medicine_names, medicine_list, decoder)
+                computer_vision_pipeline(
+                    medicine_names,
+                    medicine_list,
+                    decoder,
+                    light_controller=light_controller,
+                )
 
 
 run_serena_assistent(device_id)

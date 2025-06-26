@@ -100,7 +100,11 @@ def parse_to_json(llm_output: str) -> Dict[str, Any]:
 
 @try_except(default_return="Computer Vision Pipeline ERROR")
 def computer_vision_pipeline(
-    medicine_names: Union[str, list], medication_list, decoder, timeout: int = 90
+    medicine_names: Union[str, list],
+    medication_list,
+    decoder,
+    light_controller=None,
+    timeout: int = 90,
 ):
     """
     Runs a vision-based medication recognition pipeline with a timeout.
@@ -120,7 +124,7 @@ def computer_vision_pipeline(
 
     for medicine in medicine_names:
         medicine_confirmation = False
-        detection_pipeline = DetectionPipeline()
+        detection_pipeline = DetectionPipeline(light_controller=light_controller)
         start_time = time.time()
 
         while not medicine_confirmation:
@@ -140,6 +144,16 @@ def computer_vision_pipeline(
                 word.lower() for word in detection_response.split(" ")
             ]
             medication_found = set(detection_response_words) & set(medication_list)
+            if not medication_found:
+                decoder.string_to_speech(
+                    f"Rémedio não identificado, você gostaria de tentar novamente"
+                )
+                option = decoder.audio_to_string()
+                while not option.strip():
+                    decoder.string_to_speech("Desculpe, não entendi. Pode repetir?")
+                    option = decoder.audio_to_string()
+                if "não" in option.lower():
+                    break
 
             if medication_found:
                 if medicine.lower() not in detection_response_words:
@@ -178,6 +192,7 @@ def dispenser_pipeline(
     quantity_used_list: List[int],
     decoder,
     dispenser_controller,
+    light_controller,
 ) -> List[Dict]:
     if isinstance(medicine_names, str):
         medicine_names = [medicine_names]
@@ -195,7 +210,12 @@ def dispenser_pipeline(
             decoder.string_to_speech("Desculpe, não entendi. Pode repetir?")
             command = decoder.audio_to_string()
         if "sim" in command.lower():
-            computer_vision_pipeline(medicine_names, medication_list, decoder)
+            computer_vision_pipeline(
+                medicine_names,
+                medication_list,
+                decoder,
+                light_controller=light_controller,
+            )
         return updates
 
     dispenser_controller.run(compartments_indexes)

@@ -35,6 +35,7 @@ class DetectionPipeline:
             os.path.dirname(__file__), "models", "best.pt"
         ),
         stability_threshold: int = 10,
+        light_controller=None,
     ):
         """
         Initializes the DetectionPipeline with a YOLO model and an OCR pipeline.
@@ -46,6 +47,7 @@ class DetectionPipeline:
         self.__ocr_pipeline = OCRPipeline()
         self.__yolo_model = YOLO(yolo_model_path)
         self.stability_threshold_setter(stability_threshold)
+        self.light_controller = light_controller
 
     @property
     def yolo_model(self) -> ultralytics.models.yolo.model.YOLO:
@@ -167,49 +169,36 @@ class DetectionPipeline:
 
     def run_detection(self) -> str:
         """
-        Runs the main detection and OCR pipeline.
-
-        Starts video capture, detects medicine boxes using YOLO, waits until a box is stable
-        for several frames, then runs OCR on the detected region and returns the extracted text.
+        Captures a single image from the camera, applies YOLO detection,
+        runs OCR on the first detected box, and returns the extracted text.
 
         Returns:
             str: Extracted text from the detected medicine box.
         """
+        if self.light_controller:
+            self.light_controller.green_on()
+
+        # Abre a câmera (mude o índice se necessário)
         cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            raise RuntimeError("Failed to open the camera.")
 
-        last_bbox: Optional[np.ndarray] = None
-        stable_counter: int = 0
-        stable_required: int = 6
-        while cap.isOpened():
-            ret, frame = cap.read()
-            print(f"ret value :{ret}")
-            if not ret:
-                break
+        ret, frame = cap.read()
+        cap.release()
 
-            results = self.yolo_model(frame)[0]
-            annotated_frame = results.plot()
-            #cv2.imshow('Detection', annotated_frame)
-            key = cv2.waitKey(1) & 0xFF
+        if not ret:
+            raise RuntimeError("Failed to capture frame from camera.")
 
-            if len(results.boxes) > 0:
-                x1, y1, x2, y2 = map(int, results.boxes[0].xyxy[0])
-                current_bbox = np.array([x1, y1, x2, y2])
+        # Executa a detecção YOLO
+        if self.light_controller:
+            self.light_controller.blue_on()
 
-                if self.is_stable(last_bbox, current_bbox):
-                    stable_counter += 1
-                else:
-                    stable_counter = 0
+        results = self.yolo_model(frame)[0]
 
-                last_bbox = current_bbox
+        if len(results.boxes) > 0:
+            x1, y1, x2, y2 = map(int, results.boxes[0].xyxy[0])
+            crop = frame[y1:y2, x1:x2]
+            text = self.process_ocr(crop)
+            return text.strip()
 
-                if stable_counter >= stable_required:
-                    crop = frame[y1:y2, x1:x2]
-                    text = self.process_ocr(crop)
-
-                    try:
-                        if text.strip():
-                            cap.release()
-                            cv2.destroyAllWindows()
-                            return text
-                    except Exception as e:
-                        print(f"Decoder error: {e}")
+        return ""
