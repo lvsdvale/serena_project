@@ -1,0 +1,26 @@
+[
+  {
+    "id": "da58d4d6-fe0f-453d-b799-62d1c24353b2",
+    "medication_id": "da51173f-940f-4d2a-8847-1cb406fdd95e",
+    "description": "Qualquer descrição para Paracetamol",
+    "frequency": "8",
+    "end_date": "2025-08-02T04:26:49.984142",
+    "senior_id": "12345678901",
+    "doctor_id": "c7758837-2769-49fb-a2cc-7c76b8157ff8",
+    "dosage": "1 comprimido",
+    "start_date": "2025-07-03T04:26:49.984141",
+    "created_at": "2025-07-03T04:26:49.984298"
+  },
+  {
+    "id": "2419b7c4-9ed8-44d4-afdc-7f42605bc035",
+    "medication_id": "6b246370-66da-4c12-8292-76d317d9f84a",
+    "description": "Qualquer descrição para Dipirona",
+    "frequency": "12",
+    "end_date": "2025-08-02T04:26:49.984460",
+    "senior_id": "12345678901",
+    "doctor_id": "c7758837-2769-49fb-a2cc-7c76b8157ff8",
+    "dosage": "1 comprimido",
+    "start_date": "2025-07-03T04:26:49.984460",
+    "created_at": "2025-07-03T04:26:49.984535"
+  }
+]

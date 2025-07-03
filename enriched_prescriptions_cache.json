@@ -1,0 +1,22 @@
+[
+  {
+    "prescription_id": "da58d4d6-fe0f-453d-b799-62d1c24353b2",
+    "medication_name": "Paracetamol",
+    "medication_description": "Analgésico e antitérmico",
+    "frequency": "8",
+    "dosage": "1 comprimido",
+    "start_date": "2025-07-03T04:26:49.984141",
+    "end_date": "2025-08-02T04:26:49.984142",
+    "senior_id": "12345678901"
+  },
+  {
+    "prescription_id": "2419b7c4-9ed8-44d4-afdc-7f42605bc035",
+    "medication_name": "Dipirona",
+    "medication_description": "Analgésico e antitérmico",
+    "frequency": "12",
+    "dosage": "1 comprimido",
+    "start_date": "2025-07-03T04:26:49.984460",
+    "end_date": "2025-08-02T04:26:49.984460",
+    "senior_id": "12345678901"
+  }
+]

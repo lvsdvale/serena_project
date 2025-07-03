@@ -1,8 +1,8 @@
 """implement useful functions"""
 
 import json
-import re
 import os
+import re
 import time
 from typing import Any, Dict, List, Union
 
@@ -179,6 +179,8 @@ def get_compartments_by_medicine_name(
     index_list = []
     for name in medicine_names:
         for index in range(len(stock_list)):
+            if stock_list[index]["medication_name"] is None:
+                continue
             if stock_list[index]["medication_name"].lower() == name.lower():
                 index_list.append(index + 1)
                 stocks_to_update_list.append(stock_list[index])
@@ -235,9 +237,11 @@ def dispenser_pipeline(
 
     return updates
 
+
 def save_json_to_file(data, filename):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
 
 def load_json_from_file(filename):
     if os.path.exists(filename):

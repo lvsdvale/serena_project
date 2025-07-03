@@ -1,13 +1,15 @@
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
+
 import requests
-from utils import save_json_to_file, load_json_from_file
+
+from utils import load_json_from_file, save_json_to_file
 
 BASE_URL = "https://serena-api-mn6f.onrender.com"
 
 
 class SerenaAPIClient:
-    def __init__(self, email: str, password: str, timeout: float = 5.0) -> None:
+    def __init__(self, email: str, password: str, timeout: float = 15.0) -> None:
         self.email = email
         self.password = password
         self.timeout = timeout
@@ -104,7 +106,9 @@ class SerenaAPIClient:
     ) -> Optional[Dict[str, Any]]:
         url = f"{BASE_URL}/compartment/{compartment_id}"
         payload = {"quantity": quantity, "medication_id": medication_id}
-        response = requests.patch(url, json=payload, headers=self.headers, timeout=self.timeout)
+        response = requests.patch(
+            url, json=payload, headers=self.headers, timeout=self.timeout
+        )
         response.raise_for_status()
         return response.json()
 
@@ -124,7 +128,9 @@ class SerenaAPIClient:
             "pain_level": pain_level,
             "senior_id": str(senior_id),
         }
-        response = requests.post(url, json=payload, headers=self.headers, timeout=self.timeout)
+        response = requests.post(
+            url, json=payload, headers=self.headers, timeout=self.timeout
+        )
         response.raise_for_status()
         return response.json()
 
@@ -143,7 +149,9 @@ class SerenaAPIClient:
         return response.json()
 
     @_auto_reauth(cache_file="enriched_prescriptions_cache.json")
-    def get_enriched_prescriptions(self, device_id: int) -> Optional[List[Dict[str, Any]]]:
+    def get_enriched_prescriptions(
+        self, device_id: int
+    ) -> Optional[List[Dict[str, Any]]]:
         prescriptions = self.get_valid_prescriptions(device_id)
         medications = self.get_medication_list()
 
@@ -172,7 +180,9 @@ class SerenaAPIClient:
         return enriched
 
     @_auto_reauth(cache_file="full_dispenser_status_cache.json")
-    def get_full_dispenser_status(self, device_id: int) -> Optional[List[Dict[str, Any]]]:
+    def get_full_dispenser_status(
+        self, device_id: int
+    ) -> Optional[List[Dict[str, Any]]]:
         compartments = self.get_dispenser_status(device_id)
         if compartments is None:
             print(f"[WARNING] Using cached full dispenser status due to API failure.")

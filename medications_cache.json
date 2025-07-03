@@ -1,0 +1,52 @@
+[
+  {
+    "name": "Paracetamol",
+    "description": "Analgésico e antitérmico",
+    "id": "da51173f-940f-4d2a-8847-1cb406fdd95e"
+  },
+  {
+    "name": "Dipirona",
+    "description": "Analgésico e antitérmico",
+    "id": "6b246370-66da-4c12-8292-76d317d9f84a"
+  },
+  {
+    "name": "Ibuprofeno",
+    "description": "Anti-inflamatório",
+    "id": "7739388c-2adb-4368-94ba-37bf7c3ce747"
+  },
+  {
+    "name": "Amoxicilina",
+    "description": "Antibiótico",
+    "id": "f52f0421-a0dd-4077-a4e3-fcdbc1d51480"
+  },
+  {
+    "name": "Losartana",
+    "description": "Anti-hipertensivo",
+    "id": "4777b9e8-ad8b-4704-94e0-383a138e423e"
+  },
+  {
+    "name": "Metformina",
+    "description": "Antidiabético oral",
+    "id": "3a27de98-7545-414a-9c11-3ce334748dae"
+  },
+  {
+    "name": "Omeprazol",
+    "description": "Inibidor de bomba de próton",
+    "id": "0ee992b5-7ef9-487c-98c4-d043746f2408"
+  },
+  {
+    "name": "Sinvastatina",
+    "description": "Redutor de colesterol",
+    "id": "46baae34-8072-4066-966d-4e98d78a362f"
+  },
+  {
+    "name": "AAS",
+    "description": "Antiplaquetário",
+    "id": "edaeab03-da9f-49b5-8763-5122bdc6e315"
+  },
+  {
+    "name": "Ranitidina",
+    "description": "Antiácido",
+    "id": "0afa4583-1c14-4563-b680-bec2090c34bf"
+  }
+]
