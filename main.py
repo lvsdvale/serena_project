@@ -65,7 +65,7 @@ def run_serena_assistent(device_id: str):
             if "não" in option.lower():
                 continue
             decoder.string_to_speech(
-                f"você gostaria de tomar o medicamento pela camêra ou pelo dispenser?"
+                f"você gostaria de tomar o medicamento pela câmera ou pelo dispenser?"
             )
             medicine_list = client.get_medication_list()
             medicine_list = [medicine["name"] for medicine in medicine_list]

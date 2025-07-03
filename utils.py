@@ -2,6 +2,7 @@
 
 import json
 import re
+import os
 import time
 from typing import Any, Dict, List, Union
 
@@ -233,3 +234,13 @@ def dispenser_pipeline(
         )
 
     return updates
+
+def save_json_to_file(data, filename):
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def load_json_from_file(filename):
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
